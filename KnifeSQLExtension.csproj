@@ -6,4 +6,26 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="DevToys.Api" Version="2.0.9-preview" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="KnifeSql\KnifeSqlResources.resx">
+      <LastGenOutput>KnifeSqlResources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="KnifeSqlResources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>KnifeSqlResources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="KnifeSqlResources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>KnifeSqlResources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
 </Project>
