@@ -1,0 +1,2 @@
+- Place each UI module in a separate folder with your feature name
+- Shared views you can place in the UI folder without creating any subfolders

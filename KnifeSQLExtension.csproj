@@ -28,4 +28,20 @@
     </Compile>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Assets\" />
+    <Folder Include="Core\Constants\" />
+    <Folder Include="Core\Models\" />
+    <Folder Include="Core\Services\" />
+    <Folder Include="Features\RandomDataGeneration\Contants\" />
+    <Folder Include="Features\RandomDataGeneration\Models\" />
+    <Folder Include="Features\RandomDataGeneration\Services\" />
+    <Folder Include="Features\SqlDiffView\Constants\" />
+    <Folder Include="Features\SqlDiffView\Models\" />
+    <Folder Include="Features\SqlDiffView\Services\" />
+    <Folder Include="Features\SqlVisualizer\Constants\" />
+    <Folder Include="Features\SqlVisualizer\Models\" />
+    <Folder Include="Features\SqlVisualizer\Services\" />
+  </ItemGroup>
+
 </Project>

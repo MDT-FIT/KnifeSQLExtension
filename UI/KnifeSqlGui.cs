@@ -2,7 +2,7 @@ using DevToys.Api;
 using System.ComponentModel.Composition;
 using static DevToys.Api.GUI;
 
-namespace KnifeSQLExtension;
+namespace KnifeSQLExtension.UI;
 
 [Export(typeof(IGuiTool))]
 [Name("KnifeSQLExtension")] // A unique, internal name of the tool.
