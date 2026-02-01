@@ -28,6 +28,9 @@ Just as DevToys is the "Swiss Army Knife" for developers, KnifeSql is the specia
 Framework: .NET 8.0
 API: DevToys.Api
 Distribution: NuGet Package
+
+Other packages to install:
+SqlParser: https://github.com/TylerBrinks/SqlParser-cs
 ```
 
 For setup and debuggig, please check the official DevToys doc: https://devtoys.app/doc/articles/introduction.html
@@ -36,6 +39,7 @@ NOTE: Install DevToys or\and DevToys.CLI for full debuggin process
 ## Codeowners
 
 AnderZerfall, Vangelis, Andriy, MainClippersFan
+
 
 
 
