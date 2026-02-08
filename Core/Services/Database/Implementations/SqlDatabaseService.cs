@@ -1,9 +1,5 @@
 ﻿using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using Microsoft.Data.SqlClient;
-using System;
-using System.Collections.Generic;
-using System.Linq; // Треба для формування запитів
-using System.Threading.Tasks;
 
 namespace KnifeSQLExtension.Core.Services.Database.Implementations
 {
@@ -19,9 +15,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 await _connection.OpenAsync();
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return false;
+                throw new Exception($"Помилка SQL: {ex.Message}");
             }
         }
 

@@ -1,4 +1,3 @@
-using System;
 using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using KnifeSQLExtension.Core.Services.Database.Implementations;
 
