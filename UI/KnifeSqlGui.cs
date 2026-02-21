@@ -46,6 +46,10 @@ internal sealed class KnifeSqlGui : IGuiTool
     private IDatabaseClient _dbClient;
     private bool _isConnected = false;
 
+    // --- State variables for Confirmation Logic ---
+    private bool _isAwaitingConfirmation = false;
+    private string _pendingDangerousQuery = string.Empty;
+
     // --- View Layout (Використовуємо SplitGrid для великого Output) ---
     public UIToolView View
         => new UIToolView(
@@ -109,22 +113,50 @@ internal sealed class KnifeSqlGui : IGuiTool
     {
         if (!_isConnected || _dbClient == null)
         {
-            UpdateOutput("⚠️ Спочатку підключіться до БД!");
+            UpdateOutput("⚠️ Будь ласка, спочатку підключіться до бази даних!");
             return;
         }
 
         string query = _queryInput.Text;
         if (string.IsNullOrWhiteSpace(query)) return;
 
-        // parser integration
-        string parserWarning = Parser.CheckForWarnings(query);
-        if (!string.IsNullOrEmpty(parserWarning))
+        // Parser with confirmation
+
+        // 1. Check if we wait this one query 
+        if (_isAwaitingConfirmation && query == _pendingDangerousQuery)
         {
-            // if parser returned warning, block execution and demonstrate it
-            UpdateOutput($"{parserWarning}\n\n❌ Виконання запиту скасовано через безпекові причини.");
-            return;
+            // User pressed the button secondly
+            _isAwaitingConfirmation = false;
+            _pendingDangerousQuery = string.Empty;
+            // Return usual button's text
+            _executeButton.Text("Виконати запит"); 
+
+            UpdateOutput("⚠️ Виконання небезпечного запиту після підтвердження користувачем...");
+        }
+        else
+        {
+            // 2. Usual flow - check query with parser
+            string parserWarning = Parser.CheckForWarnings(query);
+            if (!string.IsNullOrEmpty(parserWarning))
+            {
+                // Parser find out the danger
+                _isAwaitingConfirmation = true;
+                _pendingDangerousQuery = query;
+
+                // Change button text with warning
+                _executeButton.Text("⚠️ ПІДТВЕРДІТЬ СВІЙ ЗАПИТ ⚠️");
+
+                UpdateOutput($"{parserWarning}\n\n🛑 Запит призупинено для вашої безпеки.\nЯкщо ви ДІЙСНО хочете його виконати, натисніть кнопку '⚠️ ПІДТВЕРДІТЬ НЕБЕЗПЕЧНИЙ ЗАПИТ ⚠️' ще раз.");
+                return; 
+            }
+
+            // If query is safe, change the state
+            _isAwaitingConfirmation = false;
+            _pendingDangerousQuery = string.Empty;
+            _executeButton.Text("Виконати запит");
         }
 
+        // Querry execution
         Task.Run(async () =>
         {
             try
@@ -133,7 +165,7 @@ internal sealed class KnifeSqlGui : IGuiTool
                 var results = await _dbClient.ExecuteQueryAsync(query);
 
                 var sb = new StringBuilder();
-                sb.AppendLine($"✅ Запит успішно виконано. ({results.Count} результат(-ів) повернуто)\n");
+                sb.AppendLine($"✅ Запит успішно виконано. (Повернуто результатів: {results.Count})\n");
 
                 int rowIndex = 1;
                 foreach (var row in results)
