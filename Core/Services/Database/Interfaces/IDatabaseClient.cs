@@ -2,30 +2,33 @@
 
 namespace KnifeSQLExtension.Core.Services.Database.Interfaces
 {
+    // Interface that define a standard behaviout(methods) for
+    // cooncrete classes of DB handling
     public interface IDatabaseClient
     {
-        // Connection
+        // Connection managment
         Task<bool> ConnectAsync(string connectionString);
         Task DisconnectAsync();
 
-        // get list of tables
+        // get list of available tables in the connected DB
         Task<List<string>> GetTablesAsync();
 
-        // universal query
+        // universal query for execution of any SQL query
         Task<List<Dictionary<string, object>>> ExecuteQueryAsync(string query);
 
-        //CRUD  
+        //CRUD operations
 
-        // READ 
+        // READ - fetch all data from specific table
         Task<List<Dictionary<string, object>>> GetDataAsync(string tableName);
 
-        // CREATE 
+        // CREATE - insert a new row into table. New data contains 
+        // columns names and their values
         Task InsertDataAsync(string tableName, Dictionary<string, object> data);
 
-        // UPDATE 
+        // UPDATE - modify an existing row based on a specific ID
         Task UpdateDataAsync(string tableName, string idColumn, string idValue, Dictionary<string, object> data);
 
-        // DELETE 
+        // DELETE - remove a row based on a specific ID
         Task DeleteDataAsync(string tableName, string idColumn, string idValue);
     }
 }

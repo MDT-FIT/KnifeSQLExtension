@@ -1,193 +1,127 @@
 using DevToys.Api;
 using KnifeSQLExtension.Core;
 using KnifeSQLExtension.Core.Services.Database.Interfaces;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Text;
+using System.Threading.Tasks;
 using static DevToys.Api.GUI;
 
 namespace KnifeSQLExtension.UI;
 
 [Export(typeof(IGuiTool))]
-[Name("KnifeSQLExtension")] // A unique, internal name of the tool.
+[Name("KnifeSQLExtension")]
 [ToolDisplayInformation(
-    IconFontName = "FluentSystemIcons", // This font is available by default in DevToys
-    IconGlyph = '\uE670', // An icon that represents a pizza
-    GroupName = PredefinedCommonToolGroupNames.Converters, // The group in which the tool will appear in the sidebar.
-    ResourceManagerAssemblyIdentifier = nameof(KnifeSqlAssemblyIdentifier), // The Resource Assembly Identifier to use
-    ResourceManagerBaseName =
-        "KnifeSQLExtension.KnifeSqlResources", // The full name (including namespace) of the resource file containing our localized texts
-    ShortDisplayTitleResourceName =
-        nameof(KnifeSqlResources.ShortDisplayTitle), // The name of the resource to use for the short display title
+    IconFontName = "FluentSystemIcons",
+    IconGlyph = '\uE670',
+    GroupName = PredefinedCommonToolGroupNames.Converters,
+    ResourceManagerAssemblyIdentifier = nameof(KnifeSqlAssemblyIdentifier),
+    ResourceManagerBaseName = "KnifeSQLExtension.KnifeSqlResources",
+    ShortDisplayTitleResourceName = nameof(KnifeSqlResources.ShortDisplayTitle),
     LongDisplayTitleResourceName = nameof(KnifeSqlResources.LongDisplayTitle),
     DescriptionResourceName = nameof(KnifeSqlResources.Description),
     AccessibleNameResourceName = nameof(KnifeSqlResources.AccessibleName))]
 internal sealed class KnifeSqlGui : IGuiTool
 {
-    // --- Elements of interface ---
+    // --- UI Elements ---
 
-    // Textfield for connection string
+    // ДОДАНО: Випадаючий список для вибору БД
+    // Dropdown for selecting database type
+    private readonly IUISelectDropDownList _dbTypeSelect = SelectDropDownList("db-type-select")
+        .WithItems(
+            Item("MS SQL Server", "sqlserver"),
+            Item("PostgreSQL", "postgresql"),
+            Item("MySQL", "mysql")
+        )
+        .Select(0);
+
     private readonly IUIMultiLineTextInput _connectionStringInput = MultiLineTextInput("sql-connection-string");
+    private readonly IUIButton _connectButton = Button("btn-connect");
 
-    // Field for log's output
+    private readonly IUIMultiLineTextInput _queryInput = MultiLineTextInput("sql-query");
+    private readonly IUIButton _executeButton = Button("btn-execute");
+
     private readonly IUIMultiLineTextInput _outputBox = MultiLineTextInput("sql-output");
 
-    // --- State Management ---
-    // We need to store the client at the class level to use it across different buttons
     private IDatabaseClient _dbClient;
     private bool _isConnected = false;
 
-    // --- Visual part (View) ---
+    // --- View Layout (Використовуємо SplitGrid для великого Output) ---
     public UIToolView View
         => new UIToolView(
-            Stack()
+            SplitGrid()
                 .Vertical()
-                .WithChildren(
-                    // Section 1: Connection
-                    Label("Database Connection Test").Style(UILabelStyle.Subtitle),
+                .TopPaneLength(new UIGridLength(1, UIGridUnitType.Fraction))
+                .BottomPaneLength(new UIGridLength(1, UIGridUnitType.Fraction))
+                .WithTopPaneChild(
+                    Stack()
+                        .Vertical()
+                        .WithChildren(
+                            Label("Database Connection").Style(UILabelStyle.Subtitle),
+                            _dbTypeSelect.Title("Database Type"), // Наш новий список
+                            _connectionStringInput
+                                .Title("Connection String")
+                                .Text("Server=(localdb)\\MSSQLLocalDB;Database=master;Integrated Security=True;Encrypt=False;"),
+                            _connectButton.Text("Connect").OnClick(OnConnectClicked),
 
-                    _connectionStringInput
-                        .Title("Connection String")
-                        .Text("Server=(localdb)\\MSSQLLocalDB;Database=master;Integrated Security=True;TrustServerCertificate=True;Encrypt=False;"),
+                            Label("Query Editor").Style(UILabelStyle.Subtitle),
+                            _queryInput.Title("SQL Query").Language("sql").Text("SELECT * FROM INFORMATION_SCHEMA.TABLES;"),
+                            _executeButton.Text("Execute Query").AccentAppearance().OnClick(OnExecuteClicked)
+                        )
+                )
+                .WithBottomPaneChild(
+                    // OutputBox розтягнеться на всю нижню панель!
+                    _outputBox.Title("Results & Logs").ReadOnly()
+                )
+        );
 
-                    Button("btn-connect")
-                        .Text("1. Connect to Database")
-                        .OnClick(OnConnectClicked),
-
-                    // Section 2: CRUD Operations
-                    Label("CRUD Operations").Style(UILabelStyle.Subtitle),
-
-                    // Group buttons horizontally for better layout
-                    Stack().Horizontal().WithChildren(
-                        Button("btn-create-table").Text("2. Create Table").OnClick(OnCreateTableClicked),
-                        Button("btn-insert").Text("3. Insert Data").OnClick(OnInsertClicked),
-                        Button("btn-read").Text("4. Read Data").OnClick(OnReadClicked)
-                    ),
-                    Stack().Horizontal().WithChildren(
-                        Button("btn-update").Text("5. Update Data").OnClick(OnUpdateClicked),
-                        Button("btn-delete").Text("6. Delete Data").OnClick(OnDeleteClicked)
-                    ),
-
-                    // Section 3: Logs
-                    Label("Status & Logs").Style(UILabelStyle.Subtitle),
-
-                    _outputBox
-                        .Title("Log Output")
-                        .ReadOnly() // User here can only read
-                ));
-
-    // --- 1. CONNECT Logic ---
+    // --- Logics ---
     private void OnConnectClicked()
     {
         Task.Run(async () =>
         {
             try
             {
-                UpdateOutput("Attempting to connect...");
+                UpdateOutput("Підключення...");
 
-                string connString = _connectionStringInput.Text;
+                // Визначаємо, яку БД обрав користувач
+                string selectedDb = _dbTypeSelect.SelectedItem?.Value?.ToString();
+                DatabaseType dbType = selectedDb switch
+                {
+                    "postgresql" => DatabaseType.PostgreSql,
+                    "mysql" => DatabaseType.MySql,
+                    _ => DatabaseType.SqlServer
+                };
 
-                // Initialize the client
-                _dbClient = DbConnect.GetClient(DatabaseType.SqlServer);
-
-                // Try to connect and store the result
-                _isConnected = await _dbClient.ConnectAsync(connString);
+                _dbClient = DbConnect.GetClient(dbType);
+                _isConnected = await _dbClient.ConnectAsync(_connectionStringInput.Text);
 
                 if (_isConnected)
-                {
-                    UpdateOutput("✅ Success! Connection established. You can now use the CRUD buttons below.");
-                    // We DO NOT disconnect here anymore, so we can run other tests.
-                }
+                    UpdateOutput($"✅ Підключено до {dbType} успішно!");
                 else
-                {
-                    UpdateOutput("❌ Connection failed. Check your Connection String.");
-                }
+                    UpdateOutput("❌ Підключитися не вдалося.");
             }
-            catch (System.Exception ex)
-            {
-                UpdateOutput($"🔥 Error: {ex.Message}");
-            }
+            catch (System.Exception ex) { UpdateOutput($"❌ Помилка: {ex.Message}"); }
         });
     }
 
-    // --- 2. CREATE TABLE Logic ---
-    private void OnCreateTableClicked()
-    {
-        RunTest(async () =>
-        {
-            // SQL query to create a table if it doesn't exist
-            string query = "IF OBJECT_ID('TestUser', 'U') IS NULL CREATE TABLE TestUser (Id INT, Name NVARCHAR(50), Age INT)";
-            await _dbClient.ExecuteQueryAsync(query);
-            return "Table 'TestUser' created (or already exists).";
-        });
-    }
-
-    // --- 3. INSERT Logic ---
-    private void OnInsertClicked()
-    {
-        RunTest(async () =>
-        {
-            // Prepare data to insert
-            var data = new Dictionary<string, object>
-            {
-                { "Id", 1 },
-                { "Name", "Andrii" },
-                { "Age", 20 }
-            };
-            await _dbClient.InsertDataAsync("TestUser", data);
-            return "Row inserted: Id=1, Name=Andrii, Age=20";
-        });
-    }
-
-    // --- 4. READ Logic ---
-    private void OnReadClicked()
-    {
-        RunTest(async () =>
-        {
-            // Get all data from the table
-            var results = await _dbClient.GetDataAsync("TestUser");
-
-            string log = $"Rows found: {results.Count}\n";
-            foreach (var row in results)
-            {
-                // Format the output string
-                log += $" - User: {row["Name"]}, Age: {row["Age"]}\n";
-            }
-            return log;
-        });
-    }
-
-    // --- 5. UPDATE Logic ---
-    private void OnUpdateClicked()
-    {
-        RunTest(async () =>
-        {
-            var data = new Dictionary<string, object>
-            {
-                { "Name", "Andrii Updated" },
-                { "Age", 25 }
-            };
-            // Update the row where Id = 1
-            await _dbClient.UpdateDataAsync("TestUser", "Id", "1", data);
-            return "Row updated (Id=1). Name is now 'Andrii Updated'.";
-        });
-    }
-
-    // --- 6. DELETE Logic ---
-    private void OnDeleteClicked()
-    {
-        RunTest(async () =>
-        {
-            // Delete the row where Id = 1
-            await _dbClient.DeleteDataAsync("TestUser", "Id", "1");
-            return "Row with Id=1 deleted.";
-        });
-    }
-
-    // --- Helper method to run tests safely ---
-    private void RunTest(System.Func<Task<string>> testAction)
+    private void OnExecuteClicked()
     {
         if (!_isConnected || _dbClient == null)
         {
-            UpdateOutput("⚠️ Please connect first!");
+            UpdateOutput("⚠️ Спочатку підключіться до БД!");
+            return;
+        }
+
+        string query = _queryInput.Text;
+        if (string.IsNullOrWhiteSpace(query)) return;
+
+        // parser integration
+        string parserWarning = Parser.CheckForWarnings(query);
+        if (!string.IsNullOrEmpty(parserWarning))
+        {
+            // if parser returned warning, block execution and demonstrate it
+            UpdateOutput($"{parserWarning}\n\n❌ Виконання запиту скасовано через безпекові причини.");
             return;
         }
 
@@ -195,24 +129,31 @@ internal sealed class KnifeSqlGui : IGuiTool
         {
             try
             {
-                string result = await testAction();
-                UpdateOutput($"✅ {result}");
+                UpdateOutput("Виконання запиту...");
+                var results = await _dbClient.ExecuteQueryAsync(query);
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"✅ Запит успішно виконано. ({results.Count} результат(-ів) повернуто)\n");
+
+                int rowIndex = 1;
+                foreach (var row in results)
+                {
+                    sb.AppendLine($"--- Результат {rowIndex} ---");
+                    foreach (var column in row)
+                    {
+                        string value = column.Value == System.DBNull.Value ? "NULL" : column.Value?.ToString() ?? "NULL";
+                        sb.AppendLine($"{column.Key}: {value}");
+                    }
+                    sb.AppendLine();
+                    rowIndex++;
+                }
+
+                UpdateOutput(sb.ToString());
             }
-            catch (System.Exception ex)
-            {
-                UpdateOutput($"🔥 Error: {ex.Message}");
-            }
+            catch (System.Exception ex) { UpdateOutput($"❌ Помилка SQL: {ex.Message}"); }
         });
     }
 
-    // Additional method for safe updating text
-    private void UpdateOutput(string message)
-    {
-        _outputBox.Text(message);
-    }
-
-    public void OnDataReceived(string dataTypeName, object? parsedData)
-    {
-        // Interface demands this method
-    }
+    private void UpdateOutput(string message) => _outputBox.Text(message);
+    public void OnDataReceived(string dataTypeName, object? parsedData) { }
 }
