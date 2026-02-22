@@ -4,10 +4,15 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+	<RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="DevToys.Api" Version="2.0.9-preview" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
+    <PackageReference Include="MySqlConnector" Version="2.5.0" />
+    <PackageReference Include="Npgsql" Version="10.0.1" />
     <PackageReference Include="SqlParserCS" Version="0.6.5" />
   </ItemGroup>
 
@@ -33,7 +38,6 @@
     <Folder Include="Assets\" />
     <Folder Include="Core\Constants\" />
     <Folder Include="Core\Models\" />
-    <Folder Include="Core\Services\" />
     <Folder Include="Features\RandomDataGeneration\Contants\" />
     <Folder Include="Features\RandomDataGeneration\Models\" />
     <Folder Include="Features\RandomDataGeneration\Services\" />
