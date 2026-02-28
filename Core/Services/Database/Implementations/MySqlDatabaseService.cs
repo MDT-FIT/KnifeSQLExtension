@@ -43,16 +43,19 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
         public async Task<List<string>> GetTablesAsync()
         {
-            // Execute MySQL specific command to get all tables in the database
-            string query = "SHOW TABLES";
+            // In MySQL, "schema" is synonymous with "database".
+            // We fetch tables and their schema (db name) for the currently selected database.
+            string query = "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = DATABASE()";
+
             var result = await ExecuteQueryAsync(query);
 
             var tables = new List<string>();
             foreach (var row in result)
             {
-                if (row.Values.Count > 0)
+                if (row.ContainsKey("TABLE_SCHEMA") && row.ContainsKey("TABLE_NAME"))
                 {
-                    tables.Add(row.Values.First().ToString());
+                    // Format: database_name.table_name
+                    tables.Add($"{row["TABLE_SCHEMA"]}.{row["TABLE_NAME"]}");
                 }
             }
             return tables;

@@ -39,16 +39,18 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
         public async Task<List<string>> GetTablesAsync()
         {
-            // Get list of tables specifically in the 'public' schema of Postgres
-            string query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'";
+            // Get list of tables including their schema, excluding PostgreSQL internal system schemas
+            string query = "SELECT table_schema, table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('information_schema', 'pg_catalog')";
+
             var result = await ExecuteQueryAsync(query);
 
             var tables = new List<string>();
             foreach (var row in result)
             {
-                if (row.ContainsKey("table_name"))
+                if (row.ContainsKey("table_schema") && row.ContainsKey("table_name"))
                 {
-                    tables.Add(row["table_name"].ToString());
+                    // Format: schema_name.table_name (e.g., public.Users)
+                    tables.Add($"{row["table_schema"]}.{row["table_name"]}");
                 }
             }
             return tables;

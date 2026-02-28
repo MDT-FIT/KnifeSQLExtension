@@ -21,7 +21,7 @@ namespace KnifeSQLExtension.Core
         {
             return type switch
             {
-                DatabaseType.SqlServer => new SqlDatabaseService(),
+                DatabaseType.SqlServer => new MsSqlDatabaseService(),
                 DatabaseType.PostgreSql => new PostgresDatabaseService(), 
                 DatabaseType.MySql => new MySqlDatabaseService(),  
                 
