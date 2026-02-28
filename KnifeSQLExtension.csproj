@@ -12,7 +12,7 @@
     <PackageReference Include="DevToys.Api" Version="2.0.9-preview" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
-    <PackageReference Include="Npgsql" Version="10.0.1" />
+    <PackageReference Include="Npgsql" Version="7.0.10" />
     <PackageReference Include="SqlParserCS" Version="0.6.5" />
   </ItemGroup>
 
