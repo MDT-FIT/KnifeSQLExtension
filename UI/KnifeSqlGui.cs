@@ -144,7 +144,7 @@ internal sealed class KnifeSqlGui : IGuiTool
                 _pendingDangerousQuery = query;
 
                 // Change button text with warning
-                _executeButton.Text("⚠️ ПІДТВЕРДІТЬ СВІЙ ЗАПИТ ⚠️");
+                _executeButton.Text("⚠️ ПІДТВЕРДИТИ ЗАПИТ ⚠️");
 
                 UpdateOutput($"{parserWarning}\n\n🛑 Запит призупинено для вашої безпеки.\nЯкщо ви ДІЙСНО хочете його виконати, натисніть кнопку '⚠️ ПІДТВЕРДІТЬ НЕБЕЗПЕЧНИЙ ЗАПИТ ⚠️' ще раз.");
                 return; 

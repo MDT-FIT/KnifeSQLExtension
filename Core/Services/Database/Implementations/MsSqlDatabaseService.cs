@@ -4,7 +4,7 @@ using Microsoft.Data.SqlClient;
 namespace KnifeSQLExtension.Core.Services.Database.Implementations
 {
     // Implementation of IDatabaseClient for Microsoft SQL Server
-    public class SqlDatabaseService : IDatabaseClient
+    public class MsSqlDatabaseService : IDatabaseClient
     {
         // Storing an active connection instance to be used accros queries
         private SqlConnection _connection;
@@ -37,8 +37,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
         public async Task<List<string>> GetTablesAsync()
         {
-            // Queries the internal SQL Server schema to find all user-created tables (BASE TABLE)
-            string query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
+            // Queries the internal SQL Server schema to find all user-created tables
+            // Now fetching both SCHEMA and TABLE NAME to prevent duplicates (e.g. dbo.Users)
+            string query = "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
 
             // Reusing universal execution method to get the data
             var result = await ExecuteQueryAsync(query);
@@ -46,9 +47,10 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             var tables = new List<string>();
             foreach (var row in result)
             {
-                if (row.ContainsKey("TABLE_NAME"))
+                if (row.ContainsKey("TABLE_SCHEMA") && row.ContainsKey("TABLE_NAME"))
                 {
-                    tables.Add(row["TABLE_NAME"].ToString());
+                    // Format: SchemaName.TableName
+                    tables.Add($"{row["TABLE_SCHEMA"]}.{row["TABLE_NAME"]}");
                 }
             }
             return tables;
