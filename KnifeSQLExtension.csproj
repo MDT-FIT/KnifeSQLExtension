@@ -34,9 +34,9 @@
     <Folder Include="Core\Constants\" />
     <Folder Include="Core\Models\" />
     <Folder Include="Core\Services\" />
-    <Folder Include="Features\RandomDataGeneration\Contants\" />
-    <Folder Include="Features\RandomDataGeneration\Models\" />
+    <Folder Include="Features\RandomDataGeneration\Constants\" />
     <Folder Include="Features\RandomDataGeneration\Services\" />
+    <Folder Include="Features\RandomDataGeneration\TempPOCO\" />
     <Folder Include="Features\SqlDiffView\Constants\" />
     <Folder Include="Features\SqlDiffView\Models\" />
     <Folder Include="Features\SqlDiffView\Services\" />
