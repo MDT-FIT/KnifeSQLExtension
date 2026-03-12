@@ -7,3 +7,7 @@ All models should be moved to Models folder
 All Constants should be moved to Constants folder
 
 Core logic should be moved to Services
+
+
+///////////////////////////
+I'mma do it on my own terms
