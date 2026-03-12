@@ -10,7 +10,7 @@ namespace KnifeSQLExtension
     {
         public ValueTask<FontDefinition[]> GetFontDefinitionsAsync()
         {
-            throw new NotImplementedException();
+            return new ValueTask<FontDefinition[]>(Array.Empty<FontDefinition>());
         }
     }
 }
