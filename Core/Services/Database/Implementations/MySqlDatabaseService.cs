@@ -1,4 +1,5 @@
-﻿using KnifeSQLExtension.Core.Services.Database.Interfaces;
+﻿using KnifeSQLExtension.Core.Models;
+using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using MySqlConnector;
 using System;
 using System.Collections.Generic;
@@ -168,6 +169,11 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 }
             }
             return results;
+        }
+
+        public Task<TableSchema> GetTableSchemaAsync(string tableName)
+        {
+            throw new NotImplementedException();
         }
     }
 }
