@@ -9,6 +9,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Features\RandomDataGeneration\Contants\**" />
+    <Compile Remove="Features\RandomDataGeneration\TempPOCO\**" />
+    <EmbeddedResource Remove="Features\RandomDataGeneration\Contants\**" />
+    <EmbeddedResource Remove="Features\RandomDataGeneration\TempPOCO\**" />
+    <None Remove="Features\RandomDataGeneration\Contants\**" />
+    <None Remove="Features\RandomDataGeneration\TempPOCO\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="DevToys.Api" Version="2.0.9-preview" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
@@ -36,12 +45,9 @@
 
   <ItemGroup>
     <Folder Include="Assets\" />
-    <Folder Include="Core\Constants\" />
-    <Folder Include="Core\Models\" />
+    <Folder Include="Core\Constants\TxtBackups\" />
     <Folder Include="Core\Services\" />
-    <Folder Include="Features\RandomDataGeneration\Contants\" />
     <Folder Include="Features\RandomDataGeneration\Services\" />
-    <Folder Include="Features\RandomDataGeneration\TempPOCO\" />
     <Folder Include="Features\SqlDiffView\Constants\" />
     <Folder Include="Features\SqlDiffView\Models\" />
     <Folder Include="Features\SqlDiffView\Services\" />
