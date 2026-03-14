@@ -1,4 +1,5 @@
-﻿using KnifeSQLExtension.Core.Services.Database.Interfaces;
+﻿using KnifeSQLExtension.Core.Models;
+using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using Npgsql;
 
 namespace KnifeSQLExtension.Core.Services.Database.Implementations
@@ -161,6 +162,11 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 }
             }
             return results;
+        }
+
+        public Task<TableSchema> GetTableSchemaAsync(string tableName)
+        {
+            throw new NotImplementedException();
         }
     }
 }

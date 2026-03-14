@@ -1,5 +1,8 @@
-﻿using KnifeSQLExtension.Core.Services.Database.Interfaces;
+﻿using KnifeSQLExtension.Core.Constants;
+using KnifeSQLExtension.Core.Models;
+using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using Microsoft.Data.SqlClient;
+using System.Text.Json;
 
 namespace KnifeSQLExtension.Core.Services.Database.Implementations
 {
@@ -191,6 +194,58 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 while (await reader.NextResultAsync());
             }
             return results;
+        }
+
+        /// <summary>
+        /// Retrieves the schema information for the specified table, including column definitions and related metadata.
+        /// </summary>
+        /// <remarks>The returned schema includes details such as column names, data types, nullability,
+        /// primary key status, identity columns, computed columns, default values, and foreign key relationships. This
+        /// method queries the database asynchronously and may throw an exception if the table does not exist or if the
+        /// database connection fails.</remarks>
+        /// <param name="tableName">The name of the table for which to retrieve schema information. Cannot be null.</param>
+        /// <returns>A <see cref="TableSchema"/> object containing the column definitions and metadata for the specified table.</returns>
+        public async Task<TableSchema> GetTableSchemaAsync(string tableName)
+        {
+            string query = MSSqlServerTableSchemaQuery.Query(tableName);
+
+            var data = await ExecuteQueryAsync(query);
+
+            var schema = new TableSchema(tableName);
+
+            foreach (var row in data)
+            {
+                var colSchema = new ColumnSchema();
+
+                // Parse column properties
+                string? name = row[nameof(colSchema.Name)].ToString();
+                string? type = row[nameof(colSchema.SqlType)].ToString();
+                int maxLength = Convert.ToInt32(row[nameof(colSchema.MaxLength)].ToString());
+                int isNullable = Convert.ToInt32(row[nameof(colSchema.IsNullable)].ToString());
+                int isPrimaryKey = Convert.ToInt32(row[nameof(colSchema.IsPrimaryKey)].ToString());
+                int isIdentity = Convert.ToInt32(row[nameof(colSchema.IsIdentity)].ToString());
+                int isComputed = Convert.ToInt32(row[nameof(colSchema.IsComputed)].ToString());
+                int hasDefault = Convert.ToInt32(row[nameof(colSchema.HasDefault)].ToString());
+                var fkRaw = row["ForeignKeysJson"];
+                string? jsonString = (fkRaw == DBNull.Value || fkRaw == null) ? null : fkRaw.ToString();
+
+                ArgumentNullException.ThrowIfNull(name);
+                ArgumentNullException.ThrowIfNull(type);
+
+                colSchema.Name = name;
+                colSchema.SqlType = type;
+                colSchema.MaxLength = maxLength == 0 ? null : maxLength;
+                colSchema.IsNullable = isNullable == 1;
+                colSchema.IsPrimaryKey = isPrimaryKey == 1;
+                colSchema.IsIdentity = isIdentity == 1;
+                colSchema.IsComputed = isComputed == 1;
+                colSchema.HasDefault = hasDefault == 1;
+                colSchema.FkObject = string.IsNullOrWhiteSpace(jsonString) ? null : JsonSerializer.Deserialize<FkObject>(jsonString);
+
+                schema.Columns.Add(colSchema);
+            }
+
+            return schema;
         }
     }
 }

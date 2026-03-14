@@ -5,7 +5,7 @@ using static DevToys.Api.GUI;
 
 namespace KnifeSQLExtension.UI.Views
 {
-    internal sealed class ConnectionView
+    public sealed class ConnectionView : IView
     {
         private readonly SqlSession _session;
 

@@ -1,5 +1,7 @@
 ﻿
 
+using KnifeSQLExtension.Core.Models;
+
 namespace KnifeSQLExtension.Core.Services.Database.Interfaces
 {
     // Interface that define a standard behaviout(methods) for
@@ -30,5 +32,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Interfaces
 
         // DELETE - remove a row based on a specific ID
         Task DeleteDataAsync(string tableName, string idColumn, string idValue);
+
+        // Retrieve a table schema
+        Task<TableSchema> GetTableSchemaAsync(string tableName);
     }
 }

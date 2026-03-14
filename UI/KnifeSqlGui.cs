@@ -1,13 +1,7 @@
 using DevToys.Api;
-using KnifeSQLExtension.Core;
-using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using KnifeSQLExtension.UI.Views;
-using System.Collections.Generic;
 using System.ComponentModel.Composition;
-using System.Text;
-using System.Threading.Tasks;
 using static DevToys.Api.GUI;
-
 namespace KnifeSQLExtension.UI;
 
 [Export(typeof(IGuiTool))]
@@ -24,13 +18,24 @@ namespace KnifeSQLExtension.UI;
     AccessibleNameResourceName = nameof(KnifeSqlResources.AccessibleName))]
 internal sealed class KnifeSqlGui : IGuiTool
 {
-    private readonly SqlSession _session;
-    private readonly ConnectionView _connectionView;
+    private readonly IView _connectionView;
+    private readonly IView _generationView;
+
+    // ADD GENERATION, ANALYTICS AND RELATIONAL DIAGRAMS VIEWS
+
+    // Wrap each view in a named container so we can Show()/Hide() it
+    private readonly IUIStack _connectionPanel;
+    private readonly IUIStack _generationPanel;
 
     public KnifeSqlGui()
     {
-        _session = new SqlSession();
-        _connectionView = new ConnectionView(_session);
+        var session = new SqlSession();
+        _connectionView = new ConnectionView(session);
+        _generationView = new GenerationView(session);
+
+        _connectionPanel = Stack().Vertical().WithChildren(_connectionView.View);
+        _generationPanel = Stack().Vertical().WithChildren(_generationView.View).Hide();
+        // _analyticsPanel  = Stack().Vertical().WithChildren(_analyticsView.View).Hide();
     }
 
     public UIToolView View =>
@@ -38,9 +43,38 @@ internal sealed class KnifeSqlGui : IGuiTool
             Stack()
                 .Vertical()
                 .WithChildren(
-                    _connectionView.View
+                    // Navigation bar
+                    Stack()
+                        .Horizontal()
+                        .WithChildren(
+                            Button().Text("Connection").OnClick(ShowConnection),
+                            Button().Text("Generation").OnClick(ShowGeneration)
+                        ),
+                    // View panels
+                    _connectionPanel,
+                    _generationPanel
+                // _analyticsPanel
                 )
         );
+
+    private void ShowConnection()
+    {
+        _connectionPanel.Show();
+        _generationPanel.Hide();
+        // _analyticsPanel.Hide();
+    }
+
+    private void ShowGeneration()
+    {
+        _generationPanel.Show();
+        _connectionPanel.Hide();
+    }
+
+    // private void ShowAnalytics()
+    // {
+    //     _connectionPanel.Hide();
+    //     _analyticsPanel.Show();
+    // }
 
     public void OnDataReceived(string dataTypeName, object? parsedData) { }
 }
