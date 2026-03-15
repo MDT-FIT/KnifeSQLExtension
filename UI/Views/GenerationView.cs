@@ -1,4 +1,6 @@
 ﻿using DevToys.Api;
+using KnifeSQLExtension.Core.Models;
+using KnifeSQLExtension.Features.RandomDataGeneration;
 using System.Text;
 using static DevToys.Api.GUI;
 
@@ -25,6 +27,7 @@ namespace KnifeSQLExtension.UI.Views
                 .WithChildren(
                     _outputBox
                         .Title("Result")
+                        .Extendable()
                         .ReadOnly(),
                     Stack()
                         .Horizontal()
@@ -38,6 +41,50 @@ namespace KnifeSQLExtension.UI.Views
 
 
         private void OnExecuteClicked()
+        {
+            if(!_session.IsConnected || _session.DbClient is null)
+            {
+                UpdateOutput("⚠️ Будь ласка, спочатку підключіться до бази даних!");
+                return;
+            }
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    UpdateOutput("Виконання запиту...");
+
+                    var tables = (await _session.DbClient.GetTablesAsync()).Select(t => t.Split('.')[1]).ToList();
+                    List<TableSchema> schemas = [];
+
+                    foreach(var table in tables)
+                    {
+                        schemas.Add(await _session.DbClient.GetTableSchemaAsync(table));
+                    }
+
+                    Graph graph = new Graph(schemas);
+                    var sortedTables = graph.GetSortedTables();
+
+                    var sb = new StringBuilder();
+                    int index = 1;
+                    foreach(var table in sortedTables)
+                    {
+                        sb.AppendLine($"{index}. {table}");
+                        index++;
+                    }
+
+                    UpdateOutput(sb.ToString());
+
+                }
+                catch(Exception ex)
+                {
+                    UpdateOutput($"❌ Помилка SQL: {ex.Message}");
+                }
+            });
+
+        }
+
+        private void ShowTableSchema()
         {
             if(!_session.IsConnected || _session.DbClient == null)
             {
