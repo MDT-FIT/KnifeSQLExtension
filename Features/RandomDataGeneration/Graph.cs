@@ -5,14 +5,23 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration
 {
     public class Graph
     {
-        public Dictionary<string, List<string>> Value { get; }
+        public Dictionary<string, List<string>> Body { get; }
+        public List<string> SortedTables { get; }
 
         public Graph(List<TableSchema> tableSchemas)
         {
-            Value = new Dictionary<string, List<string>>();
-            foreach(var table in tableSchemas) 
+            Body = [];
+            SortedTables = [];
+
+            CreateBody(tableSchemas);
+            SortTables();
+        }
+
+        private void CreateBody(List<TableSchema> tableSchemas)
+        {
+            foreach(var table in tableSchemas)
             {
-                Value[table.Name] = GetReferencedTables(table);
+                Body[table.Name] = GetReferencedTables(table);
             }
         }
 
@@ -24,14 +33,13 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration
                 .ToList();
         }
 
-        public List<string> GetSortedTables()
+        private void SortTables()
         {
             Dictionary<string, int> indegree = [];
-            List<string> sortedTables = [];
             Queue<string> queue = [];
 
             // Initialize dependencies count for each table
-            foreach(var item in Value)
+            foreach(var item in Body)
                 indegree[item.Key] = item.Value.Count;
 
             // Enque tables without dependencies first
@@ -43,16 +51,14 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration
             while(queue.Count > 0)
             {
                 string top = queue.Dequeue();
-                sortedTables.Add(top);
-                foreach(string next in Value[top])
+                SortedTables.Add(top);
+                foreach(string next in Body[top])
                 {
                     indegree[next]--;
                     if(indegree[next] == 0)
                         queue.Enqueue(next);
                 }
             }
-
-            return sortedTables;
         }
     }
 }
