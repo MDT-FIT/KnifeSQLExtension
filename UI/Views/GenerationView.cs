@@ -1,7 +1,10 @@
 ﻿using DevToys.Api;
 using KnifeSQLExtension.Core.Models;
 using KnifeSQLExtension.Features.RandomDataGeneration;
+using KnifeSQLExtension.Features.RandomDataGeneration.Services;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.Tasks;
 using static DevToys.Api.GUI;
 
 
@@ -10,11 +13,10 @@ namespace KnifeSQLExtension.UI.Views
     public class GenerationView : IView
     {
         private readonly SqlSession _session;
+        private DependenciesService _dependenciesService;
 
         private readonly IUIButton _schemaButton = Button("btn-schema");
         private readonly IUIMultiLineTextInput _outputBox = MultiLineTextInput("sql-output");
-
-
 
         public GenerationView(SqlSession session)
         {
@@ -39,7 +41,6 @@ namespace KnifeSQLExtension.UI.Views
                         )
         );
 
-
         private void OnExecuteClicked()
         {
             if(!_session.IsConnected || _session.DbClient is null)
@@ -48,26 +49,23 @@ namespace KnifeSQLExtension.UI.Views
                 return;
             }
 
+            _dependenciesService = new DependenciesService(_session.DbClient);
+
             Task.Run(async () =>
             {
                 try
                 {
                     UpdateOutput("Виконання запиту...");
 
-                    var tables = (await _session.DbClient.GetTablesAsync()).Select(t => t.Split('.')[1]).ToList();
-                    List<TableSchema> schemas = [];
+                    
+                    List<string> chosenTables = ["Comments"];
+                    List<string> affectedTables = [];
 
-                    foreach(var table in tables)
-                    {
-                        schemas.Add(await _session.DbClient.GetTableSchemaAsync(table));
-                    }
-
-                    Graph graph = new Graph(schemas);
-                    var sortedTables = graph.GetSortedTables();
+                    affectedTables = await _dependenciesService.GetDependenciesAsync(chosenTables);
 
                     var sb = new StringBuilder();
                     int index = 1;
-                    foreach(var table in sortedTables)
+                    foreach(var table in affectedTables)
                     {
                         sb.AppendLine($"{index}. {table}");
                         index++;
