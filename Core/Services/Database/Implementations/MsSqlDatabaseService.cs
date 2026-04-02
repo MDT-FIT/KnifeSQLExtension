@@ -247,5 +247,29 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
             return schema;
         }
+
+        /// <summary>
+        /// Retrieves a list of database schemas
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<string>> GetDatabaseSchemasAsync()
+        {
+            string query = "SELECT name, schema_id FROM sys.schemas;";
+            List<string> schemas = [];
+
+            using(var command = new SqlCommand(query, _connection))
+            {
+                using(var reader = command.ExecuteReader())
+                {
+                    while(reader.Read())
+                    {
+                        if(reader[0] is not null)
+                            schemas.Add(reader[0]?.ToString() ?? string.Empty);
+                    }
+                }
+            }
+
+            return schemas;
+        }
     }
 }

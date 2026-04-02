@@ -8,12 +8,24 @@ namespace KnifeSQLExtension.Core.Models
 {
     public class TableSchema
     {
-        public string Name { get; set; } = string.Empty;
+        public string TableName { get; set; } = string.Empty;
+
+        public string SchemaName { get; set; } = string.Empty;
+
         public ICollection<ColumnSchema> Columns { get; set; } = [];
 
-        public TableSchema(string name)
+        public TableSchema(string fullName)
         {
-            Name = name;
+            var parts = fullName.Split('.');
+
+            SchemaName = parts[0];
+            TableName = parts[1];
+        }
+
+        public TableSchema(string tableName, string schemaName)
+        {
+            TableName = tableName;
+            SchemaName = schemaName;
         }
     }
 }

@@ -35,5 +35,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Interfaces
 
         // Retrieve a table schema
         Task<TableSchema> GetTableSchemaAsync(string tableName);
+
+        // Retrieve a list of database schemas 
+        Task<List<string>> GetDatabaseSchemasAsync();
     }
 }

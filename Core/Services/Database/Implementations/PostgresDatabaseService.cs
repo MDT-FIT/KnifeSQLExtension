@@ -168,5 +168,10 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         {
             throw new NotImplementedException();
         }
+
+        public async Task<List<string>> GetDatabaseSchemasAsync()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

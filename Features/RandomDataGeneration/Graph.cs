@@ -21,7 +21,7 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration
         {
             foreach(var table in tableSchemas)
             {
-                Body[table.Name] = GetReferencedTables(table);
+                Body[table.TableName] = GetReferencedTables(table);
             }
         }
 
