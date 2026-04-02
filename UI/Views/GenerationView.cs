@@ -45,6 +45,21 @@ namespace KnifeSQLExtension.UI.Views
         /// </summary>
         public IUIElement View => BuildUI();
 
+        /// <summary>
+        /// Initializes the required services and loads schema and table metadata asynchronously.
+        /// </summary>
+        /// <remarks>Call this method before performing operations that depend on schema or table
+        /// information. This method must be awaited to ensure that all dependencies are fully initialized.</remarks>
+        /// <returns>A task that represents the asynchronous initialization operation.</returns>
+        public async Task Init()
+        {
+            _dependenciesService = new DependenciesService(_session.DbClient);
+            _tableService = new TableService(_session.DbClient);
+
+            await InitSchemas();
+            await RefreshTables();
+        }
+
 
         /// <summary>
         /// Builds and returns the user interface layout for the schema and table selection view, including controls for
@@ -56,6 +71,9 @@ namespace KnifeSQLExtension.UI.Views
         /// <returns>An <see cref="IUIElement"/> representing the complete UI layout for the schema and table selection workflow.</returns>
         private IUIElement BuildUI()
         {
+            // Subscribe to schema selection change event
+            _schemaSelect.SelectedItemChanged += (sender, args) => OnSchemaSelected();
+
             return Stack()
                 .LargeSpacing()
                 .Vertical()
@@ -90,6 +108,14 @@ namespace KnifeSQLExtension.UI.Views
                         .WithRightPaneChild(
                             _outputBox
                         ));
+        }
+
+        private void OnSchemaSelected()
+        {
+            Task.Run(async () =>
+            {
+                await RefreshTables();
+            });
         }
 
         /// <summary>
@@ -137,28 +163,13 @@ namespace KnifeSQLExtension.UI.Views
         }
 
         /// <summary>
-        /// Initializes the required services and loads schema and table metadata asynchronously.
-        /// </summary>
-        /// <remarks>Call this method before performing operations that depend on schema or table
-        /// information. This method must be awaited to ensure that all dependencies are fully initialized.</remarks>
-        /// <returns>A task that represents the asynchronous initialization operation.</returns>
-        public async Task Init()
-        {
-            _dependenciesService = new DependenciesService(_session.DbClient);
-            _tableService = new TableService(_session.DbClient);
-
-            await InitSchemas();
-            await RefreshTables();
-        }
-
-        /// <summary>
         /// Initializes the list of available database schemas by retrieving them from the connected database and
         /// updates the schema selection UI.
         /// </summary>
         /// <remarks>This method does nothing if there is no active database connection. Ensure that the
         /// session is connected before calling this method.</remarks>
         /// <returns>A task that represents the asynchronous operation.</returns>
-        public async Task InitSchemas()
+        private async Task InitSchemas()
         {
             if(!_session.IsConnected || _session.DbClient is null)
             {
@@ -177,7 +188,7 @@ namespace KnifeSQLExtension.UI.Views
         /// <remarks>If there is no active database connection, the method does not perform the refresh
         /// and instead prompts the user to connect to the database first.</remarks>
         /// <returns>A task that represents the asynchronous refresh operation.</returns>
-        public async Task RefreshTables()
+        private async Task RefreshTables()
         {
             if(!_session.IsConnected || _session.DbClient is null)
             {
@@ -196,6 +207,7 @@ namespace KnifeSQLExtension.UI.Views
                 return button;
             })]);
         }
+
 
         /// <summary>
         /// Updates the output display with the specified message.
