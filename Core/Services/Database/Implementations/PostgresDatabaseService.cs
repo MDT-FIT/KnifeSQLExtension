@@ -164,7 +164,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             return results;
         }
 
-        public Task<TableSchema> GetTableSchemaAsync(string tableName)
+        // Database name serves as schema in Postgres
+        public Task<TableSchema> GetTableSchemaAsync(string tableName, string schema)
         {
             throw new NotImplementedException();
         }

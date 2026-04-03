@@ -171,7 +171,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             return results;
         }
 
-        public Task<TableSchema> GetTableSchemaAsync(string tableName)
+        public Task<TableSchema> GetTableSchemaAsync(string tableName, string schema="dbo")
         {
             throw new NotImplementedException();
         }

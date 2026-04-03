@@ -198,7 +198,7 @@ namespace KnifeSQLExtension.UI.Views
 
             var tables = await _tableService.GetTablesAsync(_schemaSelect.SelectedItem.Text);
             _allTableWrap.WithChildren([.. tables.Select((s) => {
-                var button = Button(s.TableName + "-btn", s.TableName);
+                var button = Button(s.FullName + "-btn", s.FullName);
 
                 button.OnClick(() => {
                     button.AccentAppearance();

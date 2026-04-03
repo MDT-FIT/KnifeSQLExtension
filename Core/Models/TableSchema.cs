@@ -12,6 +12,14 @@ namespace KnifeSQLExtension.Core.Models
 
         public string SchemaName { get; set; } = string.Empty;
 
+        public string FullName
+        {
+            get
+            {
+                return $"{SchemaName}.{TableName}";
+            }
+        }
+
         public ICollection<ColumnSchema> Columns { get; set; } = [];
 
         public TableSchema(string fullName)

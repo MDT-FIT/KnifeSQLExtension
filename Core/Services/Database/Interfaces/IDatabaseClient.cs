@@ -34,7 +34,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Interfaces
         Task DeleteDataAsync(string tableName, string idColumn, string idValue);
 
         // Retrieve a table schema
-        Task<TableSchema> GetTableSchemaAsync(string tableName);
+        Task<TableSchema> GetTableSchemaAsync(string tableName, string schema="dbo");
 
         // Retrieve a list of database schemas 
         Task<List<string>> GetDatabaseSchemasAsync();
