@@ -131,7 +131,7 @@ namespace KnifeSQLExtension.UI.Views
             {
                 var tables = await _tableService.GetTablesAsync(_schemaSelect.SelectedItem.Text);
                 _allTableWrap.WithChildren([.. tables.Select((s) => {
-                    var button = Button(s.TableName + "-btn", s.TableName);
+                    var button = Button(s.FullName + "-btn", s.FullName);
                     button.AccentAppearance();
 
                     return button;
@@ -157,7 +157,7 @@ namespace KnifeSQLExtension.UI.Views
             Task.Run(async () =>
             {
                 await InitSchemas();
-                await RefreshTables();
+                await RefreshTables(true);
             });
 
         }
@@ -188,7 +188,7 @@ namespace KnifeSQLExtension.UI.Views
         /// <remarks>If there is no active database connection, the method does not perform the refresh
         /// and instead prompts the user to connect to the database first.</remarks>
         /// <returns>A task that represents the asynchronous refresh operation.</returns>
-        private async Task RefreshTables()
+        private async Task RefreshTables(bool forceRefresh=false)
         {
             if(!_session.IsConnected || _session.DbClient is null)
             {
@@ -196,7 +196,7 @@ namespace KnifeSQLExtension.UI.Views
                 return;
             }
 
-            var tables = await _tableService.GetTablesAsync(_schemaSelect.SelectedItem.Text);
+            var tables = await _tableService.GetTablesAsync(_schemaSelect.SelectedItem.Text, forceRefresh);
             _allTableWrap.WithChildren([.. tables.Select((s) => {
                 var button = Button(s.FullName + "-btn", s.FullName);
 

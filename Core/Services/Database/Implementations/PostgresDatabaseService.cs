@@ -7,6 +7,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
     // Implementation of IDatabaseClient specifically for PostgreSQL databases.
     public class PostgresDatabaseService : IDatabaseClient
     {
+        public Type Type { get; } = Type.PostgreSql;
+
         // Connection instance for the session
         private NpgsqlConnection _connection;
 

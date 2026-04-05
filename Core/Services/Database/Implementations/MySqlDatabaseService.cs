@@ -11,6 +11,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
     // Implementation of IDatabaseClient specifically for MySQL databases
     public class MySqlDatabaseService : IDatabaseClient
     {
+        public Type Type { get; } = Type.MySql;
+
         // Connection instance for the session
         private MySqlConnection _connection;
 
@@ -25,7 +27,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 await _connection.OpenAsync();
                 return true;
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
                 throw new Exception($"Помилка MySQL: {ex.Message}");
             }
@@ -34,7 +36,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         public async Task DisconnectAsync()
         {
             // Safely close and dispose MySQL connection
-            if (_connection != null)
+            if(_connection != null)
             {
                 await _connection.CloseAsync();
                 await _connection.DisposeAsync();
@@ -51,9 +53,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             var result = await ExecuteQueryAsync(query);
 
             var tables = new List<string>();
-            foreach (var row in result)
+            foreach(var row in result)
             {
-                if (row.ContainsKey("TABLE_SCHEMA") && row.ContainsKey("TABLE_NAME"))
+                if(row.ContainsKey("TABLE_SCHEMA") && row.ContainsKey("TABLE_NAME"))
                 {
                     // Format: database_name.table_name
                     tables.Add($"{row["TABLE_SCHEMA"]}.{row["TABLE_NAME"]}");
@@ -72,7 +74,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         // CREATE operation
         public async Task InsertDataAsync(string tableName, Dictionary<string, object> data)
         {
-            if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
+            if(_connection == null || _connection.State != System.Data.ConnectionState.Open)
                 throw new Exception("Немає з'єднання!");
 
             // Dynamically generate column names and parameters
@@ -80,10 +82,10 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             var parameters = string.Join(", ", data.Keys.Select(k => "@" + k));
             string query = $"INSERT INTO {tableName} ({columns}) VALUES ({parameters})";
 
-            using (var command = new MySqlCommand(query, _connection))
+            using(var command = new MySqlCommand(query, _connection))
             {
                 // Adding values as SQL parameters prevents SQL injection
-                foreach (var item in data)
+                foreach(var item in data)
                 {
                     command.Parameters.AddWithValue("@" + item.Key, item.Value ?? DBNull.Value);
                 }
@@ -94,12 +96,12 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         // UPDATE operation
         public async Task UpdateDataAsync(string tableName, string idColumn, string idValue, Dictionary<string, object> data)
         {
-            if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
+            if(_connection == null || _connection.State != System.Data.ConnectionState.Open)
                 throw new Exception("Немає з'єднання!");
 
             // Build SET statements dynamically storing in the list
             var updates = new List<string>();
-            foreach (var key in data.Keys)
+            foreach(var key in data.Keys)
             {
                 updates.Add($"{key}=@{key}");
             }
@@ -107,9 +109,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
             string query = $"UPDATE {tableName} SET {updateString} WHERE {idColumn} = @IdVal";
 
-            using (var command = new MySqlCommand(query, _connection))
+            using(var command = new MySqlCommand(query, _connection))
             {
-                foreach (var item in data)
+                foreach(var item in data)
                 {
                     command.Parameters.AddWithValue("@" + item.Key, item.Value ?? DBNull.Value);
                 }
@@ -123,12 +125,12 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         // DELETE operation
         public async Task DeleteDataAsync(string tableName, string idColumn, string idValue)
         {
-            if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
+            if(_connection == null || _connection.State != System.Data.ConnectionState.Open)
                 throw new Exception("Немає з'єднання!");
 
             string query = $"DELETE FROM {tableName} WHERE {idColumn} = @IdVal";
 
-            using (var command = new MySqlCommand(query, _connection))
+            using(var command = new MySqlCommand(query, _connection))
             {
                 command.Parameters.AddWithValue("@IdVal", idValue);
                 await command.ExecuteNonQueryAsync();
@@ -140,14 +142,14 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         {
             var results = new List<Dictionary<string, object>>();
 
-            if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
+            if(_connection == null || _connection.State != System.Data.ConnectionState.Open)
                 throw new Exception("Немає з'єднання!");
 
-            using (var command = new MySqlCommand(query, _connection))
-            using (var reader = await command.ExecuteReaderAsync())
+            using(var command = new MySqlCommand(query, _connection))
+            using(var reader = await command.ExecuteReaderAsync())
             {
                 // Check if query is non-tabular (INSERT/UPDATE/DELETE)
-                if (reader.FieldCount == 0)
+                if(reader.FieldCount == 0)
                 {
                     var row = new Dictionary<string, object>();
                     row.Add("Rows Affected", reader.RecordsAffected);
@@ -156,10 +158,10 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 }
 
                 // Parse rows dynamically
-                while (await reader.ReadAsync())
+                while(await reader.ReadAsync())
                 {
                     var row = new Dictionary<string, object>();
-                    for (int i = 0; i < reader.FieldCount; i++)
+                    for(int i = 0; i < reader.FieldCount; i++)
                     {
                         var columnName = reader.GetName(i);
                         var value = reader.GetValue(i);
@@ -171,7 +173,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             return results;
         }
 
-        public Task<TableSchema> GetTableSchemaAsync(string tableName, string schema="dbo")
+        public Task<TableSchema> GetTableSchemaAsync(string tableName, string schema = "dbo")
         {
             throw new NotImplementedException();
         }

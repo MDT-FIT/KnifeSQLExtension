@@ -9,6 +9,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
     // Implementation of IDatabaseClient for Microsoft SQL Server
     public class MsSqlDatabaseService : IDatabaseClient
     {
+        public Type Type { get; } = Type.MsSql;
+
         // Storing an active connection instance to be used accros queries
         private SqlConnection _connection;
 

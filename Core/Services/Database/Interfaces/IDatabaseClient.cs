@@ -8,6 +8,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Interfaces
     // cooncrete classes of DB handling
     public interface IDatabaseClient
     {
+        Type Type { get; }
+
         // Connection managment
         Task<bool> ConnectAsync(string connectionString);
         Task DisconnectAsync();

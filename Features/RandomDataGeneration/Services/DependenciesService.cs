@@ -12,27 +12,18 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
 {
     public class DependenciesService
     {
-        private IDatabaseClient _client;
+        private readonly IDatabaseClient _client;
 
         public DependenciesService(IDatabaseClient client)
         {
             _client = client;
         }
 
-        public async Task<List<string>> GetDependenciesAsync(List<string> chosenTables)
+        public async Task<List<string>> GetDependenciesAsync(List<TableSchema> tables, List<string> chosenTables)
         {
             List<string> dependencies = [];
 
-            var tables = (await _client.GetTablesAsync()).Select(t => t.Split('.')[1]).ToList();
-
-            List<TableSchema> schemas = [];
-
-            foreach(var table in tables)
-            {
-                schemas.Add(await _client.GetTableSchemaAsync(table));
-            }
-
-            Graph graph = new(schemas);
+            Graph graph = new(tables);
 
             foreach(var table in chosenTables)
             {
