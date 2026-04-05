@@ -7,6 +7,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
     // Implementation of IDatabaseClient specifically for PostgreSQL databases.
     public class PostgresDatabaseService : IDatabaseClient
     {
+        public Type Type { get; } = Type.PostgreSql;
+
         // Connection instance for the session
         private NpgsqlConnection _connection;
 
@@ -164,7 +166,13 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             return results;
         }
 
-        public Task<TableSchema> GetTableSchemaAsync(string tableName)
+        // Database name serves as schema in Postgres
+        public Task<TableSchema> GetTableSchemaAsync(string tableName, string schema)
+        {
+            throw new NotImplementedException();
+        }
+
+        public async Task<List<string>> GetDatabaseSchemasAsync()
         {
             throw new NotImplementedException();
         }

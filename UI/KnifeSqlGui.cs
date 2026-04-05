@@ -27,11 +27,14 @@ internal sealed class KnifeSqlGui : IGuiTool
     private readonly IUIStack _connectionPanel;
     private readonly IUIStack _generationPanel;
 
+    private readonly IUIButton _connectionButton = Button().Text("Connection");
+    private readonly IUIButton _generationButton = Button().Text("Generation");
+
     public KnifeSqlGui()
     {
         var session = new SqlSession();
-        _connectionView = new ConnectionView(session);
         _generationView = new GenerationView(session);
+        _connectionView = new ConnectionView(session, _generationButton, (GenerationView) _generationView);
 
         _connectionPanel = Stack().Vertical().WithChildren(_connectionView.View);
         _generationPanel = Stack().Vertical().WithChildren(_generationView.View).Hide();
@@ -47,8 +50,8 @@ internal sealed class KnifeSqlGui : IGuiTool
                     Stack()
                         .Horizontal()
                         .WithChildren(
-                            Button().Text("Connection").OnClick(ShowConnection),
-                            Button().Text("Generation").OnClick(ShowGeneration)
+                            _connectionButton.OnClick(ShowConnection),
+                            _generationButton.OnClick(ShowGeneration).Hide()
                         ),
                     // View panels
                     _connectionPanel,

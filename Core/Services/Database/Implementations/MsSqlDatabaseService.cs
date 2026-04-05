@@ -9,6 +9,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
     // Implementation of IDatabaseClient for Microsoft SQL Server
     public class MsSqlDatabaseService : IDatabaseClient
     {
+        public Type Type { get; } = Type.MsSql;
+
         // Storing an active connection instance to be used accros queries
         private SqlConnection _connection;
 
@@ -205,13 +207,13 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         /// database connection fails.</remarks>
         /// <param name="tableName">The name of the table for which to retrieve schema information. Cannot be null.</param>
         /// <returns>A <see cref="TableSchema"/> object containing the column definitions and metadata for the specified table.</returns>
-        public async Task<TableSchema> GetTableSchemaAsync(string tableName)
+        public async Task<TableSchema> GetTableSchemaAsync(string tableName, string schema="dbo")
         {
-            string query = MSSqlServerTableSchemaQuery.Query(tableName);
+            string query = MSSqlServerTableSchemaQuery.Query(tableName, schema);
 
             var data = await ExecuteQueryAsync(query);
 
-            var schema = new TableSchema(tableName);
+            var tableSchema = new TableSchema(tableName);
 
             foreach (var row in data)
             {
@@ -242,10 +244,34 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 colSchema.HasDefault = hasDefault == 1;
                 colSchema.FkObject = string.IsNullOrWhiteSpace(jsonString) ? null : JsonSerializer.Deserialize<FkObject>(jsonString);
 
-                schema.Columns.Add(colSchema);
+                tableSchema.Columns.Add(colSchema);
             }
 
-            return schema;
+            return tableSchema;
+        }
+
+        /// <summary>
+        /// Retrieves a list of database schemas
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<string>> GetDatabaseSchemasAsync()
+        {
+            string query = "SELECT name, schema_id FROM sys.schemas;";
+            List<string> schemas = [];
+
+            using(var command = new SqlCommand(query, _connection))
+            {
+                using(var reader = command.ExecuteReader())
+                {
+                    while(reader.Read())
+                    {
+                        if(reader[0] is not null)
+                            schemas.Add(reader[0]?.ToString() ?? string.Empty);
+                    }
+                }
+            }
+
+            return schemas;
         }
     }
 }

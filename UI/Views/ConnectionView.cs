@@ -8,10 +8,14 @@ namespace KnifeSQLExtension.UI.Views
     public sealed class ConnectionView : IView
     {
         private readonly SqlSession _session;
+        private readonly IUIButton _generationButton;
+        private readonly GenerationView _generationView;
 
-        public ConnectionView(SqlSession session)
+        public ConnectionView(SqlSession session, IUIButton generationButton, GenerationView generationView)
         {
             _session = session;
+            _generationButton = generationButton;
+            _generationView = generationView;
         }
 
         private readonly IUISelectDropDownList _dbTypeSelect = SelectDropDownList("db-type-select")
@@ -47,7 +51,7 @@ namespace KnifeSQLExtension.UI.Views
                             _dbTypeSelect.Title("Database Type"), // Наш новий список
                             _connectionStringInput
                                 .Title("Connection String")
-                                .Text("Server=(localdb)\\MSSQLLocalDB;Database=master;Integrated Security=True;Encrypt=False;"),
+                                .Text("Server=DESKTOP-J1QI1UR;Database=test;Integrated Security=True;Encrypt=False;"),
                             _connectButton.Text("Connect").OnClick(OnConnectClicked),
 
                             Label("Query Editor").Style(UILabelStyle.Subtitle),
@@ -82,7 +86,11 @@ namespace KnifeSQLExtension.UI.Views
                     _session.IsConnected = await _session.DbClient.ConnectAsync(_connectionStringInput.Text);
 
                     if (_session.IsConnected)
+                    {
                         UpdateOutput($"✅ Підключено до {dbType} успішно!");
+                        await _generationView.Init();
+                        _generationButton.Show();
+                    }
                     else
                         UpdateOutput("❌ Підключитися не вдалося.");
                 }
