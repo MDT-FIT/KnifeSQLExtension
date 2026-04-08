@@ -22,6 +22,10 @@ namespace KnifeSQLExtension.Core.Models
 
         public ICollection<ColumnSchema> Columns { get; set; } = [];
 
+        public ICollection<string> PrimaryKeyColumns { get; set; } = [];
+
+        public ICollection<ForeignConstraint> ForeignKeys { get; set; } = [];
+
         public TableSchema(string fullName)
         {
             var parts = fullName.Split('.');

@@ -46,7 +46,7 @@
 
   <ItemGroup>
     <Folder Include="Assets\" />
-    <Folder Include="Core\Constants\TxtBackups\" />
+    <Folder Include="Core\Constants\SchemaQueries\" />
     <Folder Include="Features\SqlDiffView\Constants\" />
     <Folder Include="Features\SqlDiffView\Models\" />
     <Folder Include="Features\SqlDiffView\Services\" />

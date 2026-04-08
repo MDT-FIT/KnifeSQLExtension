@@ -1,6 +1,9 @@
-﻿using KnifeSQLExtension.Core.Models;
+﻿using KnifeSQLExtension.Core.Constants.ForeignKeyQueries;
+using KnifeSQLExtension.Core.Models;
 using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace KnifeSQLExtension.Core.Services.Database.Implementations
@@ -209,9 +212,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         public async Task<TableSchema> GetTableSchemaAsync(string tableName, string schema="dbo")
         {
             string query = MSSqlServerTableSchemaQuery.Query(tableName, schema);
-
             var data = await ExecuteQueryAsync(query);
-
             var tableSchema = new TableSchema(tableName, schema);
 
             foreach (var row in data)
@@ -246,9 +247,46 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 colSchema.FkObject = string.IsNullOrWhiteSpace(jsonString) ? null : JsonSerializer.Deserialize<FkObject>(jsonString);
 
                 tableSchema.Columns.Add(colSchema);
+
+                // Add primary keys separately to handle compound ones
+                if(colSchema.IsPrimaryKey)
+                    tableSchema.PrimaryKeyColumns.Add(colSchema.Name);
             }
 
+            tableSchema.ForeignKeys = await GetTableForeignKeysAsync(tableSchema.TableName, tableSchema.SchemaName);
+
             return tableSchema;
+        }
+
+        private async Task<List<ForeignConstraint>> GetTableForeignKeysAsync(string table, string schema = "dbo")
+        {
+            string query = MSSqlServerForeignKeysQuery.Query(table, schema);
+            var data = await ExecuteQueryAsync(query);
+
+            var lookup = new Dictionary<string, ForeignConstraint>();
+
+            foreach(var row in data)
+            {
+                string constraintName = row["ConstraintName"]?.ToString() ?? string.Empty;
+
+                if(!lookup.TryGetValue(constraintName, out var fk))
+                {
+                    fk = new ForeignConstraint
+                    {
+                        ConstraintName = constraintName,
+                        ReferencedTable = row["ReferencedTable"]?.ToString() ?? string.Empty
+                    };
+
+                    lookup[constraintName] = fk;
+                }
+
+                string fromColumn = row["FromColumn"]?.ToString() ?? string.Empty;
+                string toColumn = row["ToColumn"]?.ToString() ?? string.Empty;
+
+                fk.ColumnMappings.Add((fromColumn, toColumn));
+            }
+
+            return [.. lookup.Values];
         }
 
         /// <summary>
