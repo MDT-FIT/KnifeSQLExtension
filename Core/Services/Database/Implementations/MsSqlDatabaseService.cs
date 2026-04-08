@@ -1,5 +1,4 @@
-﻿using KnifeSQLExtension.Core.Constants;
-using KnifeSQLExtension.Core.Models;
+﻿using KnifeSQLExtension.Core.Models;
 using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
@@ -213,7 +212,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
             var data = await ExecuteQueryAsync(query);
 
-            var tableSchema = new TableSchema(tableName);
+            var tableSchema = new TableSchema(tableName, schema);
 
             foreach (var row in data)
             {
@@ -227,6 +226,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 int isPrimaryKey = Convert.ToInt32(row[nameof(colSchema.IsPrimaryKey)].ToString());
                 int isIdentity = Convert.ToInt32(row[nameof(colSchema.IsIdentity)].ToString());
                 int isComputed = Convert.ToInt32(row[nameof(colSchema.IsComputed)].ToString());
+                int isUnique = Convert.ToInt32(row[nameof(colSchema.IsUnique)].ToString());
                 int hasDefault = Convert.ToInt32(row[nameof(colSchema.HasDefault)].ToString());
                 var fkRaw = row["ForeignKeysJson"];
                 string? jsonString = (fkRaw == DBNull.Value || fkRaw == null) ? null : fkRaw.ToString();
@@ -241,6 +241,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 colSchema.IsPrimaryKey = isPrimaryKey == 1;
                 colSchema.IsIdentity = isIdentity == 1;
                 colSchema.IsComputed = isComputed == 1;
+                colSchema.IsUnique = isUnique == 1;
                 colSchema.HasDefault = hasDefault == 1;
                 colSchema.FkObject = string.IsNullOrWhiteSpace(jsonString) ? null : JsonSerializer.Deserialize<FkObject>(jsonString);
 

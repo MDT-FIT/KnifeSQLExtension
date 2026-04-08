@@ -3,6 +3,7 @@ using KnifeSQLExtension.Core.Models;
 using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using KnifeSQLExtension.Features.RandomDataGeneration.Services.Generator;
 using KnifeSQLExtension.Features.RandomDataGeneration.Services.Generators;
+using SqlParser.Ast;
 
 
 namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
@@ -69,7 +70,6 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
                 if(column.IsIdentity || column.IsComputed)
                     continue;
 
-
                 // FK column — sample from already generated keys
                 if(column.FkObject is not null)
                 {
@@ -77,26 +77,62 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
 
                     if(!pkTable.ContainsKey(fkTable))
                     {
-                        var data = await _tableService.GetTableDataAsync(fkTable);
                         var fkSchema = (await _tableService.GetTablesAsync())
                             .First(s => s.FullName == fkTable);
                         var fkPkColumn = fkSchema.Columns.First(c => c.IsPrimaryKey);
 
-                        pkTable[fkTable] = [.. data
-                            .Where(entry => entry.ContainsKey(fkPkColumn.Name))
-                            .Select(entry => entry[fkPkColumn.Name])];
+                        var values = await GetColumnValues(fkTable, fkPkColumn);
+                        pkTable[fkTable] = values;
                     }
-
                     var pool = pkTable.GetValueOrDefault(column.FkObject.FkFullTableName);
-                    row[column.Name] = (pool is null || pool.Count == 0)
+                    var value = (pool is null || pool.Count == 0)
                         ? null!
                         : _faker.PickRandom(pool);
+
+                    pkTable[fkTable].Add(value);
+                    row[column.Name] = value;
+
                     continue;
                 }
 
+                // Unique column
+                if(column.IsUnique || column.IsPrimaryKey)
+                {
+                    if(!uniqueColumnTable.ContainsKey(column.Name))
+                    {
+                        var values = await GetColumnValues(schema.FullName, column);
+                        uniqueColumnTable[column.Name] = values;
+                    }
+                    row[column.Name] = GenerateUniqueValue(_faker, column, uniqueColumnTable[column.Name]);
+                }
                 // Regular column — generate based on type/name
                 row[column.Name] = _generator.GenerateValue(_faker, column);
             }
+        }
+
+        private async Task<List<object>> GetColumnValues(string table, ColumnSchema column)
+        {
+            var data = await _tableService.GetTableDataAsync(table);
+
+            return [.. data
+                .Where(entry => entry.ContainsKey(column.Name))
+                .Select(entry => entry[column.Name])];
+        }
+
+        private object GenerateUniqueValue(Faker faker, ColumnSchema column, List<object> existingValues)
+        {
+            int maxAttempts = existingValues.Count;
+            object value;
+
+            while(maxAttempts > 0)
+            {
+                value = _generator.GenerateValue(faker, column);
+
+                if(!existingValues.Contains(value))
+                    return value;
+            }
+
+            return default!;
         }
     }
 }
