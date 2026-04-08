@@ -3,6 +3,7 @@ using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -37,7 +38,9 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
 
             foreach(var table in tableFullNames)
             {
-                tableSchemas.Add(await _client.GetTableSchemaAsync(table));
+                var parts = table.Split('.');
+
+                tableSchemas.Add(await _client.GetTableSchemaAsync(parts[1], parts[0]));
             }
 
             // Save tables to cache
@@ -64,9 +67,20 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
         /// </summary>
         /// <returns>A task that represents the asynchronous operation. The task result contains a list of strings, each
         /// representing the name of a database schema. The list is empty if no schemas are available.</returns>
-        public async Task<List<string>> GetDatabaseSchemaList()
+        public async Task<List<string>> GetDatabaseSchemaListAsync()
         {
             return await _client.GetDatabaseSchemasAsync();
+        }
+
+        public async Task<List<Dictionary<string, object>>> GetTableDataAsync(string table)
+        {
+            return await _client.GetDataAsync(table);
+        }
+
+        public async Task SeedTable(string table, List<Dictionary<string, object>> rows)
+        {
+            foreach(var row in rows)
+                await _client.InsertDataAsync(table, row);
         }
     }
 }

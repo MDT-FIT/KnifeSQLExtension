@@ -1,5 +1,6 @@
 ﻿using DevToys.Api;
 using KnifeSQLExtension.Features.RandomDataGeneration.Services;
+using Microsoft.IdentityModel.Tokens;
 using static DevToys.Api.GUI;
 
 
@@ -20,11 +21,14 @@ namespace KnifeSQLExtension.UI.Views
 
         // Services
         private DependenciesService _dependenciesService;
+        private GenerationService _generationService;
         private TableService _tableService;
 
         // Table action buttons
         private readonly IUIButton _refreshButton = Button().Text("Refresh").AccentAppearance();
         private readonly IUIButton _selectAllButton = Button().Text("Select All").AccentAppearance();
+
+        private readonly IUIButton _generateButton = Button().Text("Generate").AccentAppearance();
 
         // Output box
         private readonly IUIMultiLineTextInput _outputBox = MultiLineTextInput().ReadOnly().Title("Logs");
@@ -34,6 +38,14 @@ namespace KnifeSQLExtension.UI.Views
 
         // Database schemas select
         private readonly IUISelectDropDownList _schemaSelect = SelectDropDownList().WithItems([Item("dbo")]).Select(0);
+
+        private readonly IUIButton _confirmButton = Button().Text("Confirm");
+        private readonly IUIButton _cancelButton = Button().Text("Cancel");
+        private readonly IUILabel _addTablesLabel = Label();
+
+        private IUIStack _confirmationPanel;
+        private IUIMultiLineTextInput _additionalTablesDisplay;
+        private List<string> _pendingTablesDiff = [];
 
         public GenerationView(SqlSession session)
         {
@@ -53,8 +65,9 @@ namespace KnifeSQLExtension.UI.Views
         /// <returns>A task that represents the asynchronous initialization operation.</returns>
         public async Task Init()
         {
-            _dependenciesService = new DependenciesService(_session.DbClient);
             _tableService = new TableService(_session.DbClient);
+            _dependenciesService = new DependenciesService(_session.DbClient, _tableService);
+            _generationService = new GenerationService(_session.DbClient, _dependenciesService, _tableService);
 
             await InitSchemas();
             await RefreshTables();
@@ -71,6 +84,28 @@ namespace KnifeSQLExtension.UI.Views
         /// <returns>An <see cref="IUIElement"/> representing the complete UI layout for the schema and table selection workflow.</returns>
         private IUIElement BuildUI()
         {
+            // Create the additional tables display input (will be updated dynamically)
+            _additionalTablesDisplay = MultiLineTextInput()
+                .ReadOnly()
+                .Title("Additional Tables");
+
+            // Create the confirmation panel (hidden by default)
+            _confirmationPanel = Stack()
+                .Vertical()
+                .LargeSpacing()
+                .WithChildren(
+                    _addTablesLabel.Text("The following tables are required as dependencies:"),
+                    _additionalTablesDisplay,
+                    Stack()
+                        .Horizontal()
+                        .LargeSpacing()
+                        .WithChildren(
+                            _confirmButton.OnClick(OnConfirmAdditionalTables),
+                            _cancelButton.OnClick(OnCancelGeneration)
+                        )
+                )
+                .Hide();
+
             // Subscribe to schema selection change event
             _schemaSelect.SelectedItemChanged += (sender, args) => OnSchemaSelected();
 
@@ -82,32 +117,92 @@ namespace KnifeSQLExtension.UI.Views
                         .Vertical()
                         .WithLeftPaneChild(
                             Stack()
-                                .LargeSpacing()
-                                .Vertical()
+                                .LargeSpacing().Vertical()
                                 .WithChildren(
-                                    Stack()
-                                        .LargeSpacing()
-                                        .Horizontal()
+                                    Stack().LargeSpacing().Horizontal()
                                         .WithChildren(
                                             _refreshButton
                                                 .OnClick(OnRefreshClicked),
                                             _selectAllButton
                                                 .OnClick(OnSelectAllClicked)
                                         ),
-                                     Stack()
-                                         .LargeSpacing()
-                                         .Vertical()
+                                     Stack().LargeSpacing().Vertical()
                                          .WithChildren(
-                                            Label()
-                                            .Text("Select Schema"),
+                                            Label().Text("Select Schema"),
                                             _schemaSelect,
-                                            Label()
-                                            .Text("Choose tables"),
+                                            Label().Text("Choose tables"),
                                             _allTableWrap
                                          )))
                         .WithRightPaneChild(
                             _outputBox
-                        ));
+                        ),
+                    _confirmationPanel,
+                    _generateButton.OnClick(OnGenerateClicked)
+                );
+        }
+
+        private void OnGenerateClicked()
+        {
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var chosenTables = GetSelectedTables();
+                    if (chosenTables.Count == 0)
+                    {
+                        UpdateOutput("⚠️ Please select at least one table.");
+                        return;
+                    }
+
+                    var addTables = await _dependenciesService.GetDependenciesDiffAsync(chosenTables);
+
+                    if (!addTables.IsNullOrEmpty())
+                    {
+                        _pendingTablesDiff = addTables;
+                        _additionalTablesDisplay.Text(string.Join(Environment.NewLine, _pendingTablesDiff));
+                        _confirmationPanel.Show();
+                        return;
+                    }
+
+                    await PerformGeneration(chosenTables);
+                }
+                catch (Exception ex)
+                {
+                    UpdateOutput($"❌ Error: {ex.Message}");
+                }
+            });
+        }
+
+        private void OnConfirmAdditionalTables()
+        {
+            Task.Run(async () =>
+            {
+                var chosenTables = GetSelectedTables();
+                chosenTables.AddRange(_pendingTablesDiff);
+                _confirmationPanel.Hide();
+                await PerformGeneration(chosenTables);
+            });
+        }
+
+        private void OnCancelGeneration()
+        {
+            _confirmationPanel.Hide();
+            _pendingTablesDiff.Clear();
+            UpdateOutput("⚠️ Generation cancelled.");
+        }
+
+        private async Task PerformGeneration(List<string> tables)
+        {
+            try
+            {
+                await _generationService.Generate(tables, 10);
+
+                UpdateOutput("✅ Generation completed successfully!");
+            }
+            catch (Exception ex)
+            {
+                UpdateOutput($"❌ Generation failed: {ex.Message}");
+            }
         }
 
         private void OnSchemaSelected()
@@ -206,6 +301,11 @@ namespace KnifeSQLExtension.UI.Views
 
                 return button;
             })]);
+        }
+
+        private List<string> GetSelectedTables()
+        {
+            return [.. _allTableWrap.Children.Where(item => ((IUIButton)item).IsAccent).Select(item => ((IUIButton)item).Text)];
         }
 
 
