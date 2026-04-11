@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KnifeSQLExtension.Core.Models.Constraints;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,7 +25,9 @@ namespace KnifeSQLExtension.Core.Models
 
         public ICollection<string> PrimaryKeyColumns { get; set; } = [];
 
-        public ICollection<ForeignConstraint> ForeignKeys { get; set; } = [];
+        public ICollection<ForeignConstraint> ForeignConstraints { get; set; } = [];
+
+        public ICollection<UniqueConstraint> UniqueConstraints { get; set; } = [];
 
         public TableSchema(string fullName)
         {
