@@ -255,8 +255,11 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                     tableSchema.PrimaryKeyColumns.Add(colSchema.Name);
             }
 
-            tableSchema.ForeignConstraints = await GetTableForeignConstraintsAsync(tableSchema.TableName, tableSchema.SchemaName);
-            tableSchema.UniqueConstraints = await GetTableUniqueConstraintAsync(tableSchema.TableName, tableSchema.SchemaName);
+            tableSchema.ForeignConstraints = await GetTableForeignConstraintsAsync(
+                tableSchema.TableName, tableSchema.SchemaName);
+
+            tableSchema.UniqueConstraints = await GetTableUniqueConstraintAsync(
+                tableSchema.TableName, tableSchema.SchemaName);
 
             return tableSchema;
         }

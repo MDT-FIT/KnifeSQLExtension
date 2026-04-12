@@ -195,7 +195,7 @@ namespace KnifeSQLExtension.UI.Views
         {
             try
             {
-                await _generationService.Generate(tables, 10);
+                await _generationService.Generate(tables, 5);
 
                 UpdateOutput("✅ Generation completed successfully!");
             }

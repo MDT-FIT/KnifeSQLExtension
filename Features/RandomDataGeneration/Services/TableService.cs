@@ -1,5 +1,6 @@
 ﻿using KnifeSQLExtension.Core.Models;
 using KnifeSQLExtension.Core.Services.Database.Interfaces;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -81,6 +82,14 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
         {
             foreach(var row in rows)
                 await _client.InsertDataAsync(table, row);
+        }
+
+        public async Task<TableSchema> GetTableAsync(string table)
+        {
+            if(_cachedTables.IsNullOrEmpty())
+                _cachedTables = await GetTablesAsync();
+
+            return _cachedTables.First(t => t.FullName == table);
         }
     }
 }
