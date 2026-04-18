@@ -15,7 +15,12 @@ namespace KnifeSQLExtension.Core.Models
         public bool IsPrimaryKey { get; set; }
         public bool IsIdentity { get; set; }
         public bool IsComputed { get; set; }
+        public bool IsUnique { get; set; }
         public bool HasDefault { get; set; }
+        public bool IsPlain 
+        { 
+            get => !(IsPrimaryKey && IsUnique && FkObject is not null); 
+        }
         public FkObject? FkObject { get; set; } = null;
     }
 }

@@ -1,7 +1,11 @@
-﻿using KnifeSQLExtension.Core.Constants;
+﻿using KnifeSQLExtension.Core.Constants.ForeignKeyQueries;
+using KnifeSQLExtension.Core.Constants.UniqueIndicesQueries;
 using KnifeSQLExtension.Core.Models;
+using KnifeSQLExtension.Core.Models.Constraints;
 using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace KnifeSQLExtension.Core.Services.Database.Implementations
@@ -23,7 +27,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 await _connection.OpenAsync();
                 return true;
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
                 throw new Exception($"Помилка MS SQL: {ex.Message}");
             }
@@ -32,7 +36,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         // Method to safely close and dispose the DB connection 
         public async Task DisconnectAsync()
         {
-            if (_connection != null)
+            if(_connection != null)
             {
                 await _connection.CloseAsync();
                 await _connection.DisposeAsync();
@@ -50,9 +54,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             var result = await ExecuteQueryAsync(query);
 
             var tables = new List<string>();
-            foreach (var row in result)
+            foreach(var row in result)
             {
-                if (row.ContainsKey("TABLE_SCHEMA") && row.ContainsKey("TABLE_NAME"))
+                if(row.ContainsKey("TABLE_SCHEMA") && row.ContainsKey("TABLE_NAME"))
                 {
                     // Format: SchemaName.TableName
                     tables.Add($"{row["TABLE_SCHEMA"]}.{row["TABLE_NAME"]}");
@@ -75,7 +79,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         public async Task InsertDataAsync(string tableName, Dictionary<string, object> data)
         {
             // Ensure we are actually connected before trying to query
-            if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
+            if(_connection == null || _connection.State != System.Data.ConnectionState.Open)
                 throw new Exception("Немає з'єднання!");
 
             // Forming dynamic SQL: INSERT INTO Table (Col1, Col2) VALUES (@Col1, @Col2)
@@ -84,11 +88,11 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             string query = $"INSERT INTO {tableName} ({columns}) VALUES ({parameters})";
 
             // Using block ensures the SqlCommand is disposed from memory after execution
-            using (var command = new SqlCommand(query, _connection))
+            using(var command = new SqlCommand(query, _connection))
             {
                 // Using parameterized queries (@Key) instead of directly injecting values into the string
                 // to prevent SQL Injection attacks.
-                foreach (var item in data)
+                foreach(var item in data)
                 {
                     // Add values as parameters
                     // DBNull.Value handles C# nulls correctly for SQL
@@ -104,13 +108,13 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         // UPDATE
         public async Task UpdateDataAsync(string tableName, string idColumn, string idValue, Dictionary<string, object> data)
         {
-            if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
+            if(_connection == null || _connection.State != System.Data.ConnectionState.Open)
                 throw new Exception("Немає з'єднання!");
 
             // Forming the list of updations by setting clauses dynamically
             // "Name = @Name, Age = @Age"
             var updates = new List<string>();
-            foreach (var key in data.Keys)
+            foreach(var key in data.Keys)
             {
                 updates.Add($"{key}=@{key}");
             }
@@ -119,9 +123,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             // Constructing final UPDATE query with inserting idColumn inside
             string query = $"UPDATE {tableName} SET {updateString} WHERE {idColumn} = @IdVal";
 
-            using (var command = new SqlCommand(query, _connection))
+            using(var command = new SqlCommand(query, _connection))
             {
-                foreach (var item in data)
+                foreach(var item in data)
                 {
                     // Add values of fields
                     command.Parameters.AddWithValue("@" + item.Key, item.Value ?? DBNull.Value);
@@ -136,13 +140,13 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         // DELETE
         public async Task DeleteDataAsync(string tableName, string idColumn, string idValue)
         {
-            if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
+            if(_connection == null || _connection.State != System.Data.ConnectionState.Open)
                 throw new Exception("Немає з'єднання!");
 
             // Establish idColumn into the raw and valuew via parameter
             string query = $"DELETE FROM {tableName} WHERE {idColumn} = @IdVal";
 
-            using (var command = new SqlCommand(query, _connection))
+            using(var command = new SqlCommand(query, _connection))
             {
                 command.Parameters.AddWithValue("@IdVal", idValue);
                 await command.ExecuteNonQueryAsync();
@@ -154,11 +158,11 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         {
             var results = new List<Dictionary<string, object>>();
 
-            if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
+            if(_connection == null || _connection.State != System.Data.ConnectionState.Open)
                 throw new Exception("Немає підключення до бази даних!");
 
-            using (var command = new SqlCommand(query, _connection))
-            using (var reader = await command.ExecuteReaderAsync())
+            using(var command = new SqlCommand(query, _connection))
+            using(var reader = await command.ExecuteReaderAsync())
             {
                 // Using a do...while loop with NextResultAsync() to handle multiple query statements
                 // executed in a single batch (e.g., "UPDATE Users; SELECT * FROM Users;")
@@ -166,7 +170,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 {
                     // If it is INSERT/UPDATE/DELETE - there are no columns for reading
                     // FieldCount == 0 - no tabular data is returned.
-                    if (reader.FieldCount == 0)
+                    if(reader.FieldCount == 0)
                     {
                         var row = new Dictionary<string, object>();
                         // reader.RecordsAffected return quantity of affected rows
@@ -177,11 +181,11 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                     {
                         // It's a SELECT query
                         // Read row by row.
-                        while (await reader.ReadAsync())
+                        while(await reader.ReadAsync())
                         {
                             var row = new Dictionary<string, object>();
                             // Dynamically map column names to their values for the current row
-                            for (int i = 0; i < reader.FieldCount; i++)
+                            for(int i = 0; i < reader.FieldCount; i++)
                             {
                                 var columnName = reader.GetName(i);
                                 var value = reader.GetValue(i);
@@ -193,7 +197,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 }
                 // Read all data till the end
                 // Moves to the next result set if one exists
-                while (await reader.NextResultAsync());
+                while(await reader.NextResultAsync());
             }
             return results;
         }
@@ -207,15 +211,13 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         /// database connection fails.</remarks>
         /// <param name="tableName">The name of the table for which to retrieve schema information. Cannot be null.</param>
         /// <returns>A <see cref="TableSchema"/> object containing the column definitions and metadata for the specified table.</returns>
-        public async Task<TableSchema> GetTableSchemaAsync(string tableName, string schema="dbo")
+        public async Task<TableSchema> GetTableSchemaAsync(string tableName, string schema = "dbo")
         {
             string query = MSSqlServerTableSchemaQuery.Query(tableName, schema);
-
             var data = await ExecuteQueryAsync(query);
+            var tableSchema = new TableSchema(tableName, schema);
 
-            var tableSchema = new TableSchema(tableName);
-
-            foreach (var row in data)
+            foreach(var row in data)
             {
                 var colSchema = new ColumnSchema();
 
@@ -227,6 +229,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 int isPrimaryKey = Convert.ToInt32(row[nameof(colSchema.IsPrimaryKey)].ToString());
                 int isIdentity = Convert.ToInt32(row[nameof(colSchema.IsIdentity)].ToString());
                 int isComputed = Convert.ToInt32(row[nameof(colSchema.IsComputed)].ToString());
+                int isUnique = Convert.ToInt32(row[nameof(colSchema.IsUnique)].ToString());
                 int hasDefault = Convert.ToInt32(row[nameof(colSchema.HasDefault)].ToString());
                 var fkRaw = row["ForeignKeysJson"];
                 string? jsonString = (fkRaw == DBNull.Value || fkRaw == null) ? null : fkRaw.ToString();
@@ -241,13 +244,84 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 colSchema.IsPrimaryKey = isPrimaryKey == 1;
                 colSchema.IsIdentity = isIdentity == 1;
                 colSchema.IsComputed = isComputed == 1;
+                colSchema.IsUnique = isUnique == 1;
                 colSchema.HasDefault = hasDefault == 1;
                 colSchema.FkObject = string.IsNullOrWhiteSpace(jsonString) ? null : JsonSerializer.Deserialize<FkObject>(jsonString);
 
                 tableSchema.Columns.Add(colSchema);
+
+                // Add primary keys separately to handle compound ones
+                if(colSchema.IsPrimaryKey)
+                    tableSchema.PrimaryKeyColumns.Add(colSchema.Name);
             }
 
+            tableSchema.ForeignConstraints = await GetTableForeignConstraintsAsync(
+                tableSchema.TableName, tableSchema.SchemaName);
+
+            tableSchema.UniqueConstraints = await GetTableUniqueConstraintAsync(
+                tableSchema.TableName, tableSchema.SchemaName);
+
             return tableSchema;
+        }
+
+        private static List<T> BuildConstraints<T>(IEnumerable<Dictionary<string, object>> data,
+            Func<string, Dictionary<string, object>, T> factory,
+            Action<T, Dictionary<string, object>> aggregator) where T : Models.Constraints.Constraint
+        {
+            var lookup = new Dictionary<string, T>();
+
+            foreach(var row in data)
+            {
+                string key = row["ConstraintName"]?.ToString() ?? string.Empty;
+
+                if(!lookup.TryGetValue(key, out var item))
+                {
+                    item = factory(key, row);
+                    lookup[key] = item;
+                }
+
+                aggregator(item, row);
+            }
+
+            return [.. lookup.Values];
+        }
+
+        private async Task<List<ForeignConstraint>> GetTableForeignConstraintsAsync(string table, string schema = "dbo")
+        {
+            string query = MSSqlServerForeignKeysQuery.Query(table, schema);
+            var data = await ExecuteQueryAsync(query);
+
+            return BuildConstraints(
+                data,
+                (name, row) => new ForeignConstraint
+                {
+                    Name = name,
+                    ReferencedTable = row["ReferencedTable"]?.ToString() ?? string.Empty
+                },
+                (fk, row) =>
+                {
+                    string from = row["FromColumn"]?.ToString() ?? string.Empty;
+                    string to = row["ToColumn"]?.ToString() ?? string.Empty;
+                    fk.ColumnMappings.Add((from, to));
+                });
+        }
+
+        private async Task<List<Models.Constraints.UniqueConstraint>> GetTableUniqueConstraintAsync(string table, string schema = "dbo")
+        {
+            string query = MSSqlServerUniqueConstraintsQuery.Query(table, schema);
+            var data = await ExecuteQueryAsync(query);
+
+            return BuildConstraints(
+                data,
+                (name, _) => new Models.Constraints.UniqueConstraint
+                {
+                    Name = name
+                },
+                (uc, row) =>
+                {
+                    string column = row["ColumnName"]?.ToString() ?? string.Empty;
+                    uc.Columns.Add(column);
+                });
         }
 
         /// <summary>
