@@ -10,7 +10,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
     // Implementation of IDatabaseClient for Microsoft SQL Server
     public class MsSqlDatabaseService : AbstractDatabaseService
     {
-        // Gets the provider type as MS SQL.
+        // Gets the provider type as MS SQL
         public override Type Type { get; } = Type.MsSql;
 
         // Creates a new instance of connection for SQL Server interaction
@@ -43,8 +43,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             string query = MSSqlServerTableSchemaQuery.Query(tableName, schema);
             var data = await ExecuteQueryAsync(query);
             var tableSchema = new TableSchema(tableName);
+            var tableSchema = new TableSchema(tableName);
 
-            foreach (var row in data)
+            foreach(var row in data)
             {
                 var colSchema = new ColumnSchema();
 
@@ -55,6 +56,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 int isPrimaryKey = Convert.ToInt32(row[nameof(colSchema.IsPrimaryKey)].ToString());
                 int isIdentity = Convert.ToInt32(row[nameof(colSchema.IsIdentity)].ToString());
                 int isComputed = Convert.ToInt32(row[nameof(colSchema.IsComputed)].ToString());
+                int isUnique = Convert.ToInt32(row[nameof(colSchema.IsUnique)].ToString());
                 int hasDefault = Convert.ToInt32(row[nameof(colSchema.HasDefault)].ToString());
                 var fkRaw = row["ForeignKeysJson"];
                 string? jsonString = (fkRaw == DBNull.Value || fkRaw == null) ? null : fkRaw.ToString();
@@ -69,18 +71,29 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 colSchema.IsPrimaryKey = isPrimaryKey == 1;
                 colSchema.IsIdentity = isIdentity == 1;
                 colSchema.IsComputed = isComputed == 1;
+                colSchema.IsUnique = isUnique == 1;
                 colSchema.HasDefault = hasDefault == 1;
                 colSchema.FkObject = string.IsNullOrWhiteSpace(jsonString) ? null : JsonSerializer.Deserialize<FkObject>(jsonString);
 
                 tableSchema.Columns.Add(colSchema);
+
+                // Add primary keys separately to handle compound ones
+                if(colSchema.IsPrimaryKey)
+                    tableSchema.PrimaryKeyColumns.Add(colSchema.Name);
             }
+
+            tableSchema.ForeignConstraints = await GetTableForeignConstraintsAsync(
+                tableSchema.TableName, tableSchema.SchemaName);
+
+            tableSchema.UniqueConstraints = await GetTableUniqueConstraintAsync(
+                tableSchema.TableName, tableSchema.SchemaName);
 
             return tableSchema;
         }
-
         // Fetches all available schema names within the current MS SQL database
         // Return a list of schema names from sys.schemas
         public override async Task<List<string>> GetDatabaseSchemasAsync()
+        public async Task<List<string>> GetDatabaseSchemasAsync()
         {
             string query = "SELECT name, schema_id FROM sys.schemas;";
             var result = await ExecuteQueryAsync(query);
