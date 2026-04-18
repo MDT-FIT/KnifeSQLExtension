@@ -1,5 +1,6 @@
 ﻿using DevToys.Api;
 using KnifeSQLExtension.Core;
+using KnifeSQLExtension.Core.Services.Database.Implementations;
 using System.Text;
 using static DevToys.Api.GUI;
 
@@ -17,14 +18,6 @@ namespace KnifeSQLExtension.UI.Views
             _generationButton = generationButton;
             _generationView = generationView;
         }
-
-        private readonly IUISelectDropDownList _dbTypeSelect = SelectDropDownList("db-type-select")
-        .WithItems(
-            Item("MS SQL Server", "sqlserver"),
-            Item("PostgreSQL", "postgresql"),
-            Item("MySQL", "mysql")
-        )
-        .Select(0);
 
         private readonly IUIMultiLineTextInput _connectionStringInput = MultiLineTextInput("sql-connection-string");
         private readonly IUIButton _connectButton = Button("btn-connect");
@@ -48,7 +41,6 @@ namespace KnifeSQLExtension.UI.Views
                         .Vertical()
                         .WithChildren(
                             Label("Database Connection").Style(UILabelStyle.Subtitle),
-                            _dbTypeSelect.Title("Database Type"), // Наш новий список
                             _connectionStringInput
                                 .Title("Connection String")
                                 .Text("Server=DESKTOP-J1QI1UR;Database=test;Integrated Security=True;Encrypt=False;"),
@@ -73,21 +65,12 @@ namespace KnifeSQLExtension.UI.Views
                 {
                     UpdateOutput("Підключення...");
 
-                    // Визначаємо, яку БД обрав користувач
-                    string selectedDb = _dbTypeSelect.SelectedItem?.Value?.ToString();
-                    DatabaseType dbType = selectedDb switch
-                    {
-                        "postgresql" => DatabaseType.PostgreSql,
-                        "mysql" => DatabaseType.MySql,
-                        _ => DatabaseType.SqlServer
-                    };
-
-                    _session.DbClient = DbConnect.GetClient(dbType);
+                    _session.DbClient = new MsSqlDatabaseService();
                     _session.IsConnected = await _session.DbClient.ConnectAsync(_connectionStringInput.Text);
 
                     if (_session.IsConnected)
                     {
-                        UpdateOutput($"✅ Підключено до {dbType} успішно!");
+                        UpdateOutput($"✅ Підключено до MS SQL успішно!");
                         await _generationView.Init();
                         _generationButton.Show();
                     }
@@ -134,8 +117,7 @@ namespace KnifeSQLExtension.UI.Views
 
                     // Change button text with warning
                     _executeButton.Text("⚠️ ПІДТВЕРДИТИ ЗАПИТ ⚠️");
-
-                    UpdateOutput($"{parserWarning}\n\n🛑 Запит призупинено для вашої безпеки.\nЯкщо ви ДІЙСНО хочете його виконати, натисніть кнопку '⚠️ ПІДТВЕРДІТЬ НЕБЕЗПЕЧНИЙ ЗАПИТ ⚠️' ще раз.");
+                    UpdateOutput($"{parserWarning}\n\n🛑 Запит призупинено для вашої безпеки.\nЯкщо ви ДІЙСНО хочете його виконати, натисніть кнопку '⚠️ ПІДТВЕРДИТИ ЗАПИТ ⚠️' ще раз.");
                     return;
                 }
 
