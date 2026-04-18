@@ -1,6 +1,4 @@
-﻿using KnifeSQLExtension.Core.Constants;
-using KnifeSQLExtension.Core.Models;
-using KnifeSQLExtension.Core.Services.Database.Interfaces;
+﻿using KnifeSQLExtension.Core.Models;
 using Microsoft.Data.SqlClient;
 using System.Data.Common;
 using System.Text.Json;
