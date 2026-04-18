@@ -275,7 +275,7 @@ namespace KnifeSQLExtension.UI.Views
 
             _schemaSelect.WithItems([.. dbSchemas.Select(t => Item(t))]);
         }
-
+        
         /// <summary>
         /// Asynchronously refreshes the list of database tables displayed in the user interface based on the currently
         /// selected schema.
