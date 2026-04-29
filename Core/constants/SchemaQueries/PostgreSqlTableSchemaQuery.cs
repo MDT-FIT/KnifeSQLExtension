@@ -1,8 +1,10 @@
-﻿internal static class PostgreSqlTableSchemaQuery
+﻿namespace KnifeSQLExtension.Core.Constants.SchemaQueries
 {
-    public static string Query(string table, string schema)
+    internal static class PostgreSqlTableSchemaQuery
     {
-        return $@"
+        public static string Query(string table, string schema)
+        {
+            return $@"
             SELECT
                 c.column_name AS Name,
                 c.udt_name AS SqlType,
@@ -68,5 +70,6 @@
               AND c.table_schema = '{schema}'
 
             ORDER BY c.ordinal_position;";
+        }
     }
 }

@@ -2,6 +2,8 @@ using DevToys.Api;
 using KnifeSQLExtension.UI.Views;
 using System.ComponentModel.Composition;
 using static DevToys.Api.GUI;
+using Microsoft.Extensions.Logging;
+
 namespace KnifeSQLExtension.UI;
 
 [Export(typeof(IGuiTool))]
@@ -18,27 +20,46 @@ namespace KnifeSQLExtension.UI;
     AccessibleNameResourceName = nameof(KnifeSqlResources.AccessibleName))]
 internal sealed class KnifeSqlGui : IGuiTool
 {
-    private readonly IView _connectionView;
-    private readonly IView _generationView;
-
     // ADD GENERATION, ANALYTICS AND RELATIONAL DIAGRAMS VIEWS
 
     // Wrap each view in a named container so we can Show()/Hide() it
     private readonly IUIStack _connectionPanel;
     private readonly IUIStack _generationPanel;
+    private readonly IUIStack _visualizerPanel;
 
     private readonly IUIButton _connectionButton = Button().Text("Connection");
     private readonly IUIButton _generationButton = Button().Text("Generation");
 
+
     public KnifeSqlGui()
     {
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
         var session = new SqlSession();
-        _generationView = new GenerationView(session);
-        _connectionView = new ConnectionView(session, _generationButton, (GenerationView) _generationView);
-
-        _connectionPanel = Stack().Vertical().WithChildren(_connectionView.View);
-        _generationPanel = Stack().Vertical().WithChildren(_generationView.View).Hide();
-        // _analyticsPanel  = Stack().Vertical().WithChildren(_analyticsView.View).Hide();
+        
+        var connectionView = new ConnectionView(session, loggerFactory.CreateLogger<ConnectionView>(), loggerFactory);
+        var generationView = new GenerationView(session, loggerFactory.CreateLogger<GenerationView>(), loggerFactory);
+        var visualizerView = new VisualizerView(session, loggerFactory.CreateLogger<VisualizerView>(), loggerFactory);
+        
+        _connectionPanel = Stack().Vertical().WithChildren(connectionView.View);
+        _generationPanel = Stack().Vertical().WithChildren(generationView.View).Hide();
+        _visualizerPanel = Stack().Vertical().WithChildren(visualizerView.View);
+        
+        session.ConnectionStateChanged += async (isConnected) =>
+        {
+            if (isConnected)
+            {
+                _generationButton.Enable();
+                await generationView.Init();
+                await visualizerView.Init();
+                ShowGeneration();
+                _visualizerPanel.Show();
+                return;
+            }
+        
+            _generationButton.Disable();
+            ShowConnection();
+            _visualizerPanel.Hide();
+        };
     }
 
     public UIToolView View =>
@@ -46,17 +67,15 @@ internal sealed class KnifeSqlGui : IGuiTool
             Stack()
                 .Vertical()
                 .WithChildren(
-                    // Navigation bar
                     Stack()
                         .Horizontal()
                         .WithChildren(
                             _connectionButton.OnClick(ShowConnection),
-                            _generationButton.OnClick(ShowGeneration).Hide()
+                            _generationButton.OnClick(ShowGeneration).Disable()
                         ),
-                    // View panels
                     _connectionPanel,
-                    _generationPanel
-                // _analyticsPanel
+                    _generationPanel,
+                    _visualizerPanel
                 )
         );
 
@@ -64,20 +83,15 @@ internal sealed class KnifeSqlGui : IGuiTool
     {
         _connectionPanel.Show();
         _generationPanel.Hide();
-        // _analyticsPanel.Hide();
     }
-
+    
     private void ShowGeneration()
     {
         _generationPanel.Show();
         _connectionPanel.Hide();
     }
 
-    // private void ShowAnalytics()
-    // {
-    //     _connectionPanel.Hide();
-    //     _analyticsPanel.Show();
-    // }
-
-    public void OnDataReceived(string dataTypeName, object? parsedData) { }
+    public void OnDataReceived(string dataTypeName, object? parsedData)
+    {
+    }
 }

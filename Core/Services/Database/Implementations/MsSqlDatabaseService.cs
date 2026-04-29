@@ -4,19 +4,25 @@ using KnifeSQLExtension.Core.Models;
 using KnifeSQLExtension.Core.Models.Constraints;
 using KnifeSQLExtension.Core.Services.Database.Interfaces;
 using Microsoft.Data.SqlClient;
-using System.Data;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
+using KnifeSQLExtension.Core.Constants.SchemaQueries;
+using Microsoft.Extensions.Logging;
 
 namespace KnifeSQLExtension.Core.Services.Database.Implementations
 {
     // Implementation of IDatabaseClient for Microsoft SQL Server
     public class MsSqlDatabaseService : IDatabaseClient
     {
-        public Type Type { get; } = Type.MsSql;
+        public DatabaseType DatabaseType { get; } = DatabaseType.MsSql;
 
         // Storing an active connection instance to be used accros queries
         private SqlConnection _connection;
+        private readonly ILogger<MsSqlDatabaseService> _logger;
+
+        public MsSqlDatabaseService(ILogger<MsSqlDatabaseService> logger)
+        {
+            _logger = logger;
+        }
 
         // Method to establish connection to the DB
         public async Task<bool> ConnectAsync(string connectionString)
@@ -25,11 +31,13 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             {
                 _connection = new SqlConnection(connectionString);
                 await _connection.OpenAsync();
+                _logger.LogInformation("Successfully connected to MSSQL database");
                 return true;
             }
             catch (Exception ex)
             {
-                throw new Exception($"Помилка MS SQL: {ex.Message}");
+                _logger.LogError(ex, "Failed to connect to MSSQL database");
+                throw;
             }
         }
 
@@ -48,7 +56,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         {
             // Queries the internal SQL Server schema to find all user-created tables
             // Now fetching both SCHEMA and TABLE NAME to prevent duplicates (e.g. dbo.Users)
-            string query = "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
+            string query =
+                "SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
 
             // Reusing universal execution method to get the data
             var result = await ExecuteQueryAsync(query);
@@ -62,6 +71,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                     tables.Add($"{row["TABLE_SCHEMA"]}.{row["TABLE_NAME"]}");
                 }
             }
+
             return tables;
         }
 
@@ -106,7 +116,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         }
 
         // UPDATE
-        public async Task UpdateDataAsync(string tableName, string idColumn, string idValue, Dictionary<string, object> data)
+        public async Task UpdateDataAsync(string tableName, string idColumn, string idValue,
+            Dictionary<string, object> data)
         {
             if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
                 throw new Exception("Немає з'єднання!");
@@ -118,6 +129,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             {
                 updates.Add($"{key}=@{key}");
             }
+
             string updateString = string.Join(", ", updates);
 
             // Constructing final UPDATE query with inserting idColumn inside
@@ -130,6 +142,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                     // Add values of fields
                     command.Parameters.AddWithValue("@" + item.Key, item.Value ?? DBNull.Value);
                 }
+
                 // Add ID value with which we are seeking a raw
                 command.Parameters.AddWithValue("@IdVal", idValue);
 
@@ -141,7 +154,10 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         public async Task DeleteDataAsync(string tableName, string idColumn, string idValue)
         {
             if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
-                throw new Exception("Немає з'єднання!");
+            {
+                throw new Exception("Connection has been lost");
+            }
+                
 
             // Establish idColumn into the raw and valuew via parameter
             string query = $"DELETE FROM {tableName} WHERE {idColumn} = @IdVal";
@@ -159,7 +175,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             var results = new List<Dictionary<string, object>>();
 
             if (_connection == null || _connection.State != System.Data.ConnectionState.Open)
-                throw new Exception("Немає підключення до бази даних!");
+                throw new Exception("No connection to database!");
 
             using (var command = new SqlCommand(query, _connection))
             using (var reader = await command.ExecuteReaderAsync())
@@ -191,6 +207,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                                 var value = reader.GetValue(i);
                                 row.Add(columnName, value);
                             }
+
                             results.Add(row);
                         }
                     }
@@ -199,6 +216,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 // Moves to the next result set if one exists
                 while (await reader.NextResultAsync());
             }
+
             return results;
         }
 
@@ -246,7 +264,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 colSchema.IsComputed = isComputed == 1;
                 colSchema.IsUnique = isUnique == 1;
                 colSchema.HasDefault = hasDefault == 1;
-                colSchema.FkObject = string.IsNullOrWhiteSpace(jsonString) ? null : JsonSerializer.Deserialize<FkObject>(jsonString);
+                colSchema.FkObject = string.IsNullOrWhiteSpace(jsonString)
+                    ? null
+                    : JsonSerializer.Deserialize<FkObject>(jsonString);
 
                 tableSchema.Columns.Add(colSchema);
 
@@ -306,7 +326,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 });
         }
 
-        private async Task<List<Models.Constraints.UniqueConstraint>> GetTableUniqueConstraintAsync(string table, string schema = "dbo")
+        private async Task<List<Models.Constraints.UniqueConstraint>> GetTableUniqueConstraintAsync(string table,
+            string schema = "dbo")
         {
             string query = MSSqlServerUniqueConstraintsQuery.Query(table, schema);
             var data = await ExecuteQueryAsync(query);

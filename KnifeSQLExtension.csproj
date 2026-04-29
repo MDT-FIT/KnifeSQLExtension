@@ -5,7 +5,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-	<RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,6 +14,9 @@
     <EmbeddedResource Remove="Features\RandomDataGeneration\TempPOCO\**" />
     <None Remove="Features\RandomDataGeneration\Contants\**" />
     <None Remove="Features\RandomDataGeneration\TempPOCO\**" />
+    <Compile Remove="UI\ReactUI\dist\**" />
+    <EmbeddedResource Remove="UI\ReactUI\dist\**" />
+    <None Remove="UI\ReactUI\dist\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +26,9 @@
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
     <PackageReference Include="Npgsql" Version="7.0.10" />
     <PackageReference Include="SqlParserCS" Version="0.6.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
   </ItemGroup>
 
   <ItemGroup>
@@ -45,14 +50,25 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="UI\ReactUI\dist\**">
+      <Link>dist\%(RecursiveDir)%(FileName)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Remove="UI\ReactUI\dist\**" />
+  </ItemGroup>
+
+  <Target Name="BuildReact" BeforeTargets="BeforeBuild">
+    <Exec Command="npm install" WorkingDirectory="UI/ReactUI" />
+    <Exec Command="npm run build" WorkingDirectory="UI/ReactUI" />
+  </Target>
+
+  <ItemGroup>
     <Folder Include="Assets\" />
     <Folder Include="Core\Constants\SchemaQueries\" />
     <Folder Include="Features\SqlDiffView\Constants\" />
     <Folder Include="Features\SqlDiffView\Models\" />
     <Folder Include="Features\SqlDiffView\Services\" />
-    <Folder Include="Features\SqlVisualizer\Constants\" />
-    <Folder Include="Features\SqlVisualizer\Models\" />
-    <Folder Include="Features\SqlVisualizer\Services\" />
+    <Folder Include="UI\ReactUI\" />
   </ItemGroup>
 
 </Project>

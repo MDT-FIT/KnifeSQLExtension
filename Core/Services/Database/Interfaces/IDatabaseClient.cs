@@ -1,6 +1,4 @@
-﻿
-
-using KnifeSQLExtension.Core.Models;
+﻿using KnifeSQLExtension.Core.Models;
 
 namespace KnifeSQLExtension.Core.Services.Database.Interfaces
 {
@@ -8,7 +6,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Interfaces
     // cooncrete classes of DB handling
     public interface IDatabaseClient
     {
-        Type Type { get; }
+        DatabaseType DatabaseType { get; }
 
         // Connection managment
         Task<bool> ConnectAsync(string connectionString);
@@ -36,7 +34,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Interfaces
         Task DeleteDataAsync(string tableName, string idColumn, string idValue);
 
         // Retrieve a table schema
-        Task<TableSchema> GetTableSchemaAsync(string tableName, string schema="dbo");
+        Task<TableSchema> GetTableSchemaAsync(string tableName, string schema = "dbo");
 
         // Retrieve a list of database schemas 
         Task<List<string>> GetDatabaseSchemasAsync();

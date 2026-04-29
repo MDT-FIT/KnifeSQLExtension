@@ -6,6 +6,7 @@ using KnifeSQLExtension.Features.RandomDataGeneration.Services.Generators;
 using SqlParser.Ast;
 using System.Collections.Immutable;
 using static SqlParser.Ast.DataType;
+using Microsoft.Extensions.Logging;
 
 
 namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
@@ -17,21 +18,23 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
         private readonly TableService _tableService;
         private readonly IGenerator? _generator;
         private readonly Faker _faker = new();
+        private readonly ILogger<GenerationService> _logger;
 
         // Cached table data for faster computations of primary and unique constraint values
         private readonly Dictionary<string, List<Dictionary<string, object>>> _cachedTableData = [];
 
-        public GenerationService(IDatabaseClient client, DependenciesService dependenciesService, TableService tableService)
+        public GenerationService(IDatabaseClient client, DependenciesService dependenciesService, TableService tableService, ILogger<GenerationService> logger)
         {
             _client = client;
             _dependenciesService = dependenciesService;
             _tableService = tableService;
+            _logger = logger;
 
-            Type generatorType = client.Type switch
+            Type generatorType = client.DatabaseType switch
             {
-                Core.Services.Database.Type.MsSql => typeof(MsSqlGenerator),
-                Core.Services.Database.Type.MySql => typeof(MySqlGenerator),
-                Core.Services.Database.Type.PostgreSql => typeof(PostgreSqlGenerator),
+                Core.Services.Database.DatabaseType.MsSql => typeof(MsSqlGenerator),
+                Core.Services.Database.DatabaseType.MySql => typeof(MySqlGenerator),
+                Core.Services.Database.DatabaseType.PostgreSql => typeof(PostgreSqlGenerator),
                 _ => typeof(MsSqlGenerator),
             };
             _generator = Activator.CreateInstance(generatorType) as IGenerator;
@@ -43,11 +46,14 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
 
             var schemas = await _tableService.GetTablesAsync();
             var sortedTables = await _dependenciesService.GetSortedTables();
+            
+            _logger.LogInformation("Starting data generation for tables: {Tables}", string.Join(", ", tables));
 
             // For each table (already topologically sorted)
             sortedTables.Reverse(); // Reverse to iterate from least dependent to most dependent
             foreach(var table in sortedTables)
             {
+                _logger.LogInformation("Generating data for table: {Table}", table);
                 var rows = new List<Dictionary<string, object>>();
                 if(tables.Contains(table))
                 {
@@ -67,6 +73,7 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
 
             // Clear cache
             _cachedTableData.Clear();
+            _logger.LogInformation("Data generation completed successfully");
         }
 
         private async Task CacheTables(List<string> tables)
