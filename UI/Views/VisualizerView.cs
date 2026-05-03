@@ -1,8 +1,10 @@
 ﻿using DevToys.Api;
+using KnifeSQLExtension.Core.Services;
 using KnifeSQLExtension.Features.RandomDataGeneration.Services;
 using KnifeSQLExtension.Features.SqlVisualizer.Services;
-using static DevToys.Api.GUI;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
+using static DevToys.Api.GUI;
 
 namespace KnifeSQLExtension.UI.Views
 {
@@ -15,73 +17,44 @@ namespace KnifeSQLExtension.UI.Views
         // Services
         private VisualizerService _service;
         private TableService _tableService;
-      
+
         private readonly IUIWebView _webView = WebView();
+        private LocalServer _server;
+        private string _serverUrl = "http://127.0.0.1:8080/";
 
         // Table action buttons
         private readonly IUIButton _refreshButton = Button().Text("Refresh").AccentAppearance();
 
         public VisualizerView(SqlSession session, ILogger<VisualizerView> logger, ILoggerFactory loggerFactory)
         {
+            string assemblyPath = Assembly.GetExecutingAssembly().Location;
+            string assemblyDirectory = Path.GetDirectoryName(assemblyPath)!;
+            string distPath = Path.Combine(assemblyDirectory, "dist");
+
             _session = session;
             _logger = logger;
             _loggerFactory = loggerFactory;
-
-            string assemblyDirectory = Path.GetDirectoryName(typeof(VisualizerView).Assembly.Location)!;
-
-            // Construct the path to the React dist folder (cross-platform)
-            string distPath = Path.Combine(assemblyDirectory, "dist");
-            string htmlPath = Path.Combine(distPath, "index.html");
-
-            if (File.Exists(htmlPath))
-            {
-                // Convert to proper file:// URI (works on Windows, macOS, Linux)
-                Uri fileUri = new Uri(htmlPath, UriKind.Absolute);
-                _logger.LogInformation("Loading React app from: {Path}", fileUri);
-                _webView.NavigateToUri(fileUri);
-            }
-            else
-            {
-                _logger.LogError("Could not find index.html at {Path}", htmlPath);
-            }
+            _server = new LocalServer(distPath, logger);
         }
-        
-        public IUIElement View => BuildUI();
 
+        public IUIElement View => BuildUI();
 
         public async Task Init()
         {
             _logger.LogInformation("Initializing VisualizerView");
             _tableService = new TableService(_session.GetDbClient(), _loggerFactory.CreateLogger<TableService>());
             _service = new VisualizerService(_tableService);
-            
-            // var nodes = await _service.CreateNodes();
-            // var html = _service.GenerateSvgNodes(nodes);
 
-            // Get the directory where the assembly is loaded
-            // string assemblyDirectory = Path.GetDirectoryName(typeof(VisualizerView).Assembly.Location)!;
+            Dictionary<string, Features.SqlVisualizer.Models.TableNode> nodes = await _service.CreateNodes();
 
-            // Construct the path to the React dist folder (cross-platform)
-            // string distPath = Path.Combine(assemblyDirectory, "dist");
-            // string htmlPath = Path.Combine(distPath, "index.html");
+            _server.RegisterEndpoint("/api/schema", () => _service.GetSerializedSchema(nodes));
 
-            // if (File.Exists(htmlPath))
-            // {
-            //     // Convert to proper file:// URI (works on Windows, macOS, Linux)
-            //     Uri fileUri = new Uri(htmlPath, UriKind.Absolute);
-            //     _logger.LogInformation("Loading React app from: {Path}", fileUri);
-            //     _webView.NavigateToUri(fileUri);
-            // }
-            // else
-            // {
-            //     _logger.LogError("Could not find index.html at {Path}", htmlPath);
-            // }
+            _server.Start();
 
-            // await RefreshTables();
+            _webView.NavigateToUri(new Uri(_serverUrl));
+
             _logger.LogInformation("VisualizerView initialized successfully");
         }
-
-
 
         private IUIElement BuildUI()
         {
@@ -91,7 +64,8 @@ namespace KnifeSQLExtension.UI.Views
                 .Vertical()
                 .WithChildren(
                     _webView
-                );
+                ).AlignHorizontally(UIHorizontalAlignment.Stretch)
+                .AlignVertically(UIVerticalAlignment.Stretch);
         }
 
         private void OnRefreshClicked()
@@ -101,13 +75,13 @@ namespace KnifeSQLExtension.UI.Views
                 return;
             }
 
-            Task.Run(async () =>
+            Task.Run(() =>
             {
-                await RefreshTables(true);
+                RefreshTables(true);
             });
         }
 
-        private async Task RefreshTables(bool forceRefresh = false)
+        private void RefreshTables(bool forceRefresh = false)
         {
             if (!_session.IsConnected || _session.GetDbClient() is null)
             {

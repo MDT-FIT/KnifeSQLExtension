@@ -28,7 +28,6 @@
     <PackageReference Include="SqlParserCS" Version="0.6.5" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2792.45" />
   </ItemGroup>
 
   <ItemGroup>
@@ -49,18 +48,22 @@
     </Compile>
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="UI\ReactUI\dist\**">
-      <Link>dist\%(RecursiveDir)%(FileName)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Remove="UI\ReactUI\dist\**" />
-  </ItemGroup>
+	<ItemGroup>
+		<Content Include="UI\ReactUI\dist\**">
+			<Link>dist\%(RecursiveDir)%(FileName)%(Extension)</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <Target Name="BuildReact" BeforeTargets="BeforeBuild">
-    <Exec Command="npm install" WorkingDirectory="UI/ReactUI" />
-    <Exec Command="npm run build" WorkingDirectory="UI/ReactUI" />
-  </Target>
+	<Target Name="BuildReact" BeforeTargets="BeforeBuild">
+		<Exec Command="npm install" WorkingDirectory="UI/ReactUI" />
+		<Exec Command="npm run build" WorkingDirectory="UI/ReactUI" />
+
+		<Copy
+    SourceFiles="@(_ReactDistFiles)"
+    DestinationFiles="@(_ReactDistFiles->'$(OutputPath)dist\%(RecursiveDir)%(FileName)%(Extension)')"
+    SkipUnchangedFiles="true" />
+	</Target>
 
   <ItemGroup>
     <Folder Include="Assets\" />
