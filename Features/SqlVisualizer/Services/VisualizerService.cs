@@ -31,7 +31,7 @@ public class VisualizerService
 
         foreach (TableSchema table in tables)
         {
-            nodes[table.TableName] = new TableNode { Metadata = table, Row = currentRow, Column = currentCol };
+            nodes[table.FullName] = new TableNode { Metadata = table, Row = currentRow, Column = currentCol };
 
             currentCol++;
 

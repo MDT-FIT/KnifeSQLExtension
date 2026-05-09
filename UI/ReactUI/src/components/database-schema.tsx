@@ -22,6 +22,7 @@ export const DatabaseSchema = memo(({ data }: DatabaseSchemaNodeData) => {
                 id={entry.title}
                 title={entry.title}
                 type="target"
+                isConnectable={false}
                 position={Position.Left}
               />
             </DatabaseSchemaTableCell>
@@ -30,6 +31,7 @@ export const DatabaseSchema = memo(({ data }: DatabaseSchemaNodeData) => {
                 id={entry.title}
                 title={entry.type}
                 type="source"
+                isConnectable={false}
                 position={Position.Right}
                 className="p-0"
                 handleClassName="p-0"

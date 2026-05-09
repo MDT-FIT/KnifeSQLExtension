@@ -1,12 +1,11 @@
-﻿using KnifeSQLExtension.Core.Models;
+﻿using KnifeSQLExtension.Core.Constants.SchemaQueries;
+using KnifeSQLExtension.Core.Models;
 using KnifeSQLExtension.Core.Models.Constraints;
 using KnifeSQLExtension.Core.Services.Database.Interfaces;
-using System.Text.Json;
-using KnifeSQLExtension.Core.Constants.SchemaQueries;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using System.Data;
-using OneOf.Types;
-using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace KnifeSQLExtension.Core.Services.Database.Implementations
 {
@@ -14,10 +13,10 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
     public class PostgresDatabaseService : IDatabaseClient
     {
         public DatabaseType DatabaseType { get; } = DatabaseType.PostgreSql;
-        
+
         private NpgsqlConnection? _connection;
         private readonly ILogger<PostgresDatabaseService> _logger;
-        
+
         public PostgresDatabaseService(ILogger<PostgresDatabaseService> logger)
         {
             _logger = logger;
@@ -53,8 +52,6 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
         public async Task<List<string>> GetTablesAsync()
         {
-            // Query PostgreSQL information_schema for user-created tables
-            // Excludes system schemas (pg_* and information_schema)
             string query = @"
                 SELECT table_schema, table_name 
                 FROM information_schema.tables 
@@ -62,14 +59,13 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                 AND table_schema NOT IN ('pg_catalog', 'information_schema')
                 ORDER BY table_schema, table_name";
 
-            var result = await ExecuteQueryAsync(query);
+            List<Dictionary<string, object>> result = await ExecuteQueryAsync(query);
 
-            var tables = new List<string>();
-            foreach (var row in result)
+            List<string> tables = new List<string>();
+            foreach (Dictionary<string, object> row in result)
             {
                 if (row.ContainsKey("table_schema") && row.ContainsKey("table_name"))
                 {
-                    // Format: schema.tablename
                     tables.Add($"{row["table_schema"]}.{row["table_name"]}");
                 }
             }
@@ -89,18 +85,18 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         {
             if (_connection == null || _connection.State != ConnectionState.Open)
                 throw new Exception("No connection!");
-            
-            var columns = string.Join(", ", data.Keys);
-            var parameters = string.Join(", ", data.Keys.Select(k => "@" + k));
+
+            string columns = string.Join(", ", data.Keys);
+            string parameters = string.Join(", ", data.Keys.Select(k => "@" + k));
             string query = $"INSERT INTO {tableName} ({columns}) VALUES ({parameters})";
 
-            using (var command = new NpgsqlCommand(query, _connection))
+            using (NpgsqlCommand command = new NpgsqlCommand(query, _connection))
             {
-                foreach (var item in data)
+                foreach (KeyValuePair<string, object> item in data)
                 {
                     command.Parameters.AddWithValue("@" + item.Key, item.Value is null ? DBNull.Value : item.Value);
                 }
-                
+
                 await command.ExecuteNonQueryAsync();
             }
         }
@@ -111,9 +107,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
         {
             if (_connection == null || _connection.State != ConnectionState.Open)
                 throw new Exception("No connection!");
-            
-            var updates = new List<string>();
-            foreach (var key in data.Keys)
+
+            List<string> updates = new List<string>();
+            foreach (string key in data.Keys)
             {
                 updates.Add($"{key}=@{key}");
             }
@@ -121,9 +117,9 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             string updateString = string.Join(", ", updates);
             string query = $"UPDATE {tableName} SET {updateString} WHERE {idColumn} = @IdVal";
 
-            using (var command = new NpgsqlCommand(query, _connection))
+            using (NpgsqlCommand command = new NpgsqlCommand(query, _connection))
             {
-                foreach (var item in data)
+                foreach (KeyValuePair<string, object> item in data)
                 {
                     command.Parameters.AddWithValue("@" + item.Key, item.Value is null ? DBNull.Value : item.Value);
                 }
@@ -141,29 +137,29 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
             string query = $"DELETE FROM {tableName} WHERE {idColumn} = @IdVal";
 
-            using (var command = new NpgsqlCommand(query, _connection))
+            using (NpgsqlCommand command = new NpgsqlCommand(query, _connection))
             {
                 command.Parameters.AddWithValue("@IdVal", idValue);
                 await command.ExecuteNonQueryAsync();
             }
         }
 
-        
+
         public async Task<List<Dictionary<string, object>>> ExecuteQueryAsync(string query)
         {
-            var results = new List<Dictionary<string, object>>();
+            List<Dictionary<string, object>> results = new List<Dictionary<string, object>>();
 
             if (_connection == null || _connection.State != ConnectionState.Open)
                 throw new Exception("Немає підключення до бази даних!");
 
-            using (var command = new NpgsqlCommand(query, _connection))
-            using (var reader = await command.ExecuteReaderAsync())
+            using (NpgsqlCommand command = new NpgsqlCommand(query, _connection))
+            using (NpgsqlDataReader reader = await command.ExecuteReaderAsync())
             {
                 do
                 {
                     if (reader.FieldCount == 0)
                     {
-                        var row = new Dictionary<string, object>();
+                        Dictionary<string, object> row = new Dictionary<string, object>();
                         row.Add("Rows Affected", reader.RecordsAffected);
                         results.Add(row);
                     }
@@ -171,12 +167,12 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                     {
                         while (await reader.ReadAsync())
                         {
-                            var row = new Dictionary<string, object>();
-                            
+                            Dictionary<string, object> row = new Dictionary<string, object>();
+
                             for (int i = 0; i < reader.FieldCount; i++)
                             {
-                                var columnName = reader.GetName(i);
-                                var value = reader.GetValue(i);
+                                string columnName = reader.GetName(i);
+                                object value = reader.GetValue(i);
                                 row.Add(columnName, value);
                             }
 
@@ -190,21 +186,21 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
             return results;
         }
-        
+
         public async Task<TableSchema> GetTableSchemaAsync(string tableName, string schema = "public")
         {
             string query = PostgreSqlTableSchemaQuery.Query(tableName, schema);
-            var data = await ExecuteQueryAsync(query);
-            var tableSchema = new TableSchema(tableName, schema);
+            List<Dictionary<string, object>> data = await ExecuteQueryAsync(query);
+            TableSchema tableSchema = new TableSchema(tableName, schema);
 
-            foreach (var row in data)
+            foreach (Dictionary<string, object> row in data)
             {
-                var colSchema = new ColumnSchema();
+                ColumnSchema colSchema = new ColumnSchema();
 
                 // Parse column properties
                 string? name = row["name"].ToString();
                 string? type = row["sqltype"].ToString();
-                
+
                 // Handle MaxLength - PostgresSQL returns null for unlimited varchar
                 int? maxLength = null;
                 if (row.ContainsKey("maxlength") && row["maxlength"] is not null and not DBNull)
@@ -268,7 +264,7 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                         hasDefault = parsed;
                 }
 
-                var fkRaw = row.ContainsKey("foreignkeysjson") ? row["foreignkeysjson"] : null;
+                object? fkRaw = row.ContainsKey("foreignkeysjson") ? row["foreignkeysjson"] : null;
                 string? jsonString = (fkRaw == DBNull.Value || fkRaw == null) ? null : fkRaw.ToString();
 
                 ArgumentNullException.ThrowIfNull(name);
@@ -307,13 +303,13 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             Func<string, Dictionary<string, object>, T> factory,
             Action<T, Dictionary<string, object>> aggregator) where T : Models.Constraints.Constraint
         {
-            var lookup = new Dictionary<string, T>();
+            Dictionary<string, T> lookup = new Dictionary<string, T>();
 
-            foreach (var row in data)
+            foreach (Dictionary<string, object> row in data)
             {
                 string key = row["constraintname"]?.ToString() ?? string.Empty;
 
-                if (!lookup.TryGetValue(key, out var item))
+                if (!lookup.TryGetValue(key, out T? item))
                 {
                     item = factory(key, row);
                     lookup[key] = item;
@@ -346,17 +342,17 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                     AND kcu.table_schema = @schema
                 ORDER BY tc.constraint_name";
 
-            using (var command = new NpgsqlCommand(query, _connection))
+            using (NpgsqlCommand command = new NpgsqlCommand(query, _connection))
             {
                 command.Parameters.AddWithValue("@tableName", table);
                 command.Parameters.AddWithValue("@schema", schema);
 
-                var data = new List<Dictionary<string, object>>();
-                using (var reader = await command.ExecuteReaderAsync())
+                List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
+                using (NpgsqlDataReader reader = await command.ExecuteReaderAsync())
                 {
                     while (await reader.ReadAsync())
                     {
-                        var row = new Dictionary<string, object>();
+                        Dictionary<string, object> row = new Dictionary<string, object>();
                         for (int i = 0; i < reader.FieldCount; i++)
                         {
                             row.Add(reader.GetName(i), reader.GetValue(i));
@@ -397,17 +393,17 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
                     AND kcu.table_schema = @schema
                 ORDER BY tc.constraint_name, kcu.ordinal_position";
 
-            using (var command = new NpgsqlCommand(query, _connection))
+            using (NpgsqlCommand command = new NpgsqlCommand(query, _connection))
             {
                 command.Parameters.AddWithValue("@tableName", table);
                 command.Parameters.AddWithValue("@schema", schema);
 
-                var data = new List<Dictionary<string, object>>();
-                using (var reader = await command.ExecuteReaderAsync())
+                List<Dictionary<string, object>> data = new List<Dictionary<string, object>>();
+                using (NpgsqlDataReader reader = await command.ExecuteReaderAsync())
                 {
                     while (await reader.ReadAsync())
                     {
-                        var row = new Dictionary<string, object>();
+                        Dictionary<string, object> row = new Dictionary<string, object>();
                         for (int i = 0; i < reader.FieldCount; i++)
                         {
                             row.Add(reader.GetName(i), reader.GetValue(i));
@@ -430,9 +426,6 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
             }
         }
 
-        /// <summary>
-        /// Retrieves a list of database schemas
-        /// </summary>
         public async Task<List<string>> GetDatabaseSchemasAsync()
         {
             // PostgreSQL schemas query - excludes system schemas
@@ -444,8 +437,8 @@ namespace KnifeSQLExtension.Core.Services.Database.Implementations
 
             List<string> schemas = [];
 
-            using (var command = new NpgsqlCommand(query, _connection))
-            using (var reader = await command.ExecuteReaderAsync())
+            using (NpgsqlCommand command = new NpgsqlCommand(query, _connection))
+            using (NpgsqlDataReader reader = await command.ExecuteReaderAsync())
             {
                 while (await reader.ReadAsync())
                 {

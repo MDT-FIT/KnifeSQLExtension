@@ -1,6 +1,6 @@
-import type { Edge, Node } from 'reactflow';
 import z from 'zod';
 
+import type { Edge, Node } from '@xyflow/react';
 import type { DatabaseFlowSchema, DatabaseSchemaNodeData } from '../models/node';
 import { TableSchemaSchema } from '../models/table-schema';
 
@@ -25,7 +25,6 @@ export const toNode = z.array(TableSchemaSchema).transform((tables): DatabaseFlo
       },
     });
 
-    // Simple grid positioning (optional: replace with dagre.js later)
     xOffset += 350;
     if ((index + 1) % 3 === 0) {
       xOffset = 0;

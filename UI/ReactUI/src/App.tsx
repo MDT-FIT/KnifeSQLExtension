@@ -1,8 +1,9 @@
+import { Background, BackgroundVariant, Controls, MiniMap, ReactFlow } from '@xyflow/react';
 import { useEffect, useState } from 'react';
-import ReactFlow, { Background, BackgroundVariant } from 'reactflow';
 import { getTableSchema } from './api/get-table-schema';
-import './app.css';
+import styles from './app.module.css';
 import { DatabaseSchema } from './components/database-schema';
+import { Spinner } from './components/ui/spinner';
 import { ReactFlowNodeMapper } from './domain/mappers/react-flow-mapper';
 import { DatabaseFlowSchema } from './domain/models/node';
 
@@ -32,18 +33,27 @@ function App() {
     getData();
   }, []);
 
-  if (loading) return <div>Connecting to C# Server...</div>;
-  if (error) return <div style={{ color: 'red' }}>Error: {error}</div>;
+  if (loading)
+    return (
+      <div className={styles.loading}>
+        <Spinner />
+      </div>
+    );
+  if (error) return <div className={styles.error}>Something went wrong: {error}</div>;
 
   return (
-    <div className="App">
+    <div className={styles.container}>
       <ReactFlow
+        colorMode="dark"
         defaultNodes={schema.nodes}
         defaultEdges={schema.edges}
         nodeTypes={nodeTypes}
+        nodesConnectable={false}
         fitView
       >
         <Background variant={BackgroundVariant.Dots} />
+        <Controls />
+        <MiniMap />
       </ReactFlow>
     </div>
   );

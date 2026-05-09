@@ -14,16 +14,13 @@ namespace KnifeSQLExtension.UI.Views
         private readonly ILogger<VisualizerView> _logger;
         private readonly ILoggerFactory _loggerFactory;
 
-        // Services
         private VisualizerService _service;
         private TableService _tableService;
 
         private readonly IUIWebView _webView = WebView();
         private LocalServer _server;
+        // For simplicity, we're hardcoding the server URL and port. In a production scenario, consider making this configurable or using dynamic port assignment.
         private string _serverUrl = "http://127.0.0.1:8080/";
-
-        // Table action buttons
-        private readonly IUIButton _refreshButton = Button().Text("Refresh").AccentAppearance();
 
         public VisualizerView(SqlSession session, ILogger<VisualizerView> logger, ILoggerFactory loggerFactory)
         {
@@ -41,7 +38,8 @@ namespace KnifeSQLExtension.UI.Views
 
         public async Task Init()
         {
-            _logger.LogInformation("Initializing VisualizerView");
+            _logger.LogInformation("Initializing Schema Visualizer");
+
             _tableService = new TableService(_session.GetDbClient(), _loggerFactory.CreateLogger<TableService>());
             _service = new VisualizerService(_tableService);
 
@@ -53,41 +51,12 @@ namespace KnifeSQLExtension.UI.Views
 
             _webView.NavigateToUri(new Uri(_serverUrl));
 
-            _logger.LogInformation("VisualizerView initialized successfully");
+            _logger.LogInformation("Schema Visualizer initialized successfully");
         }
 
         private IUIElement BuildUI()
         {
-
-            return Stack()
-                .LargeSpacing()
-                .Vertical()
-                .WithChildren(
-                    _webView
-                ).AlignHorizontally(UIHorizontalAlignment.Stretch)
-                .AlignVertically(UIVerticalAlignment.Stretch);
-        }
-
-        private void OnRefreshClicked()
-        {
-            if (!_session.IsConnected || _session.GetDbClient() is null)
-            {
-                return;
-            }
-
-            Task.Run(() =>
-            {
-                RefreshTables(true);
-            });
-        }
-
-        private void RefreshTables(bool forceRefresh = false)
-        {
-            if (!_session.IsConnected || _session.GetDbClient() is null)
-            {
-                return;
-            }
-
+            return _webView.AlignVertically(UIVerticalAlignment.Stretch).AlignHorizontally(UIHorizontalAlignment.Stretch);
         }
     }
 }
