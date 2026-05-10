@@ -1,0 +1,25 @@
+.container {
+  height: 100vh;
+  width: 100%;
+}
+
+.error {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  font-size: 0.75rem;
+  justify-content: center;
+  align-items: center;
+  color: hsl(348, 73%, 58%);
+  font-weight: 500;
+  background-color: hsl(353, 20%, 82%);
+}
+
+.loading {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  background-color: hsl(210, 3%, 11%);
+}

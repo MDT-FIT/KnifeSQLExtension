@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using static SqlParser.Ast.GrantObjects;
+using Microsoft.Extensions.Logging;
 
 namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
 {
@@ -16,11 +17,13 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
         private readonly IDatabaseClient _client;
         private readonly TableService _tableService;
         private Graph _graph;
+        private readonly ILogger<DependenciesService> _logger;
 
-        public DependenciesService(IDatabaseClient client, TableService tableService)
+        public DependenciesService(IDatabaseClient client, TableService tableService, ILogger<DependenciesService> logger)
         {
             _client = client;
             _tableService = tableService;
+            _logger = logger;
         }
 
         public async Task<List<string>> GetSortedTables()
@@ -41,6 +44,7 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
         /// <returns>a list of additional tables that need to be populated</returns>
         public async Task<List<string>> GetDependenciesDiffAsync(List<string> chosenTables)
         {
+            _logger.LogInformation("Analyzing dependencies for tables: {Tables}", string.Join(", ", chosenTables));
             var depTables = await GetDependenciesAsync(chosenTables);
 
             List<string> addTables = [];
@@ -58,6 +62,7 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
                 }
             }
 
+            _logger.LogInformation("Found {Count} additional tables that need data: {Tables}", addTables.Count, string.Join(", ", addTables));
             return addTables;
         }
 

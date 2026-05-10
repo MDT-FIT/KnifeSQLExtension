@@ -1,8 +1,10 @@
-﻿internal static class MySqlTableSchemaQuery
+﻿namespace KnifeSQLExtension.Core.Constants.SchemaQueries
 {
-    public static string Query(string databaseName, string tableName)
+    internal static class MySqlTableSchemaQuery
     {
-        return $@"SELECT
+        public static string Query(string databaseName, string tableName)
+        {
+            return $@"SELECT
                 c.COLUMN_NAME AS Name,
                 c.COLUMN_TYPE AS SqlType,
                 c.CHARACTER_MAXIMUM_LENGTH AS MaxLength,
@@ -51,5 +53,6 @@
               AND c.TABLE_SCHEMA = '{databaseName}'
 
             ORDER BY c.ORDINAL_POSITION;";
+        }
     }
 }

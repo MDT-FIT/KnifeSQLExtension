@@ -2,7 +2,7 @@
 using KnifeSQLExtension.Features.RandomDataGeneration.Services;
 using Microsoft.IdentityModel.Tokens;
 using static DevToys.Api.GUI;
-
+using Microsoft.Extensions.Logging;
 
 namespace KnifeSQLExtension.UI.Views
 {
@@ -18,6 +18,8 @@ namespace KnifeSQLExtension.UI.Views
     {
         // Shared session 
         private readonly SqlSession _session;
+        private readonly ILogger<GenerationView> _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
         // Services
         private DependenciesService _dependenciesService;
@@ -47,9 +49,11 @@ namespace KnifeSQLExtension.UI.Views
         private IUIMultiLineTextInput _additionalTablesDisplay;
         private List<string> _pendingTablesDiff = [];
 
-        public GenerationView(SqlSession session)
+        public GenerationView(SqlSession session, ILogger<GenerationView> logger, ILoggerFactory loggerFactory)
         {
             _session = session;
+            _logger = logger;
+            _loggerFactory = loggerFactory;
         }
 
         /// <summary>
@@ -65,9 +69,9 @@ namespace KnifeSQLExtension.UI.Views
         /// <returns>A task that represents the asynchronous initialization operation.</returns>
         public async Task Init()
         {
-            _tableService = new TableService(_session.DbClient);
-            _dependenciesService = new DependenciesService(_session.DbClient, _tableService);
-            _generationService = new GenerationService(_session.DbClient, _dependenciesService, _tableService);
+            _tableService = new TableService(_session.GetDbClient(), _loggerFactory.CreateLogger<TableService>());
+            _dependenciesService = new DependenciesService(_session.GetDbClient(), _tableService, _loggerFactory.CreateLogger<DependenciesService>());
+            _generationService = new GenerationService(_session.GetDbClient(), _dependenciesService, _tableService, _loggerFactory.CreateLogger<GenerationService>());
 
             await InitSchemas();
             await RefreshTables();
@@ -126,13 +130,13 @@ namespace KnifeSQLExtension.UI.Views
                                             _selectAllButton
                                                 .OnClick(OnSelectAllClicked)
                                         ),
-                                     Stack().LargeSpacing().Vertical()
-                                         .WithChildren(
+                                    Stack().LargeSpacing().Vertical()
+                                        .WithChildren(
                                             Label().Text("Select Schema"),
                                             _schemaSelect,
                                             Label().Text("Choose tables"),
                                             _allTableWrap
-                                         )))
+                                        )))
                         .WithRightPaneChild(
                             _outputBox
                         ),
@@ -201,16 +205,14 @@ namespace KnifeSQLExtension.UI.Views
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Generation failed");
                 UpdateOutput($"❌ Generation failed: {ex.Message}");
             }
         }
 
         private void OnSchemaSelected()
         {
-            Task.Run(async () =>
-            {
-                await RefreshTables();
-            });
+            Task.Run(async () => { await RefreshTables(); });
         }
 
         /// <summary>
@@ -225,12 +227,15 @@ namespace KnifeSQLExtension.UI.Views
             Task.Run(async () =>
             {
                 var tables = await _tableService.GetTablesAsync(_schemaSelect.SelectedItem.Text);
-                _allTableWrap.WithChildren([.. tables.Select((s) => {
-                    var button = Button(s.FullName + "-btn", s.FullName);
-                    button.AccentAppearance();
+                _allTableWrap.WithChildren([
+                    .. tables.Select((s) =>
+                    {
+                        var button = Button(s.FullName + "-btn", s.FullName);
+                        button.AccentAppearance();
 
-                    return button;
-                })]);
+                        return button;
+                    })
+                ]);
             });
         }
 
@@ -243,7 +248,7 @@ namespace KnifeSQLExtension.UI.Views
         /// command, such as clicking a refresh button in the UI.</remarks>
         private void OnRefreshClicked()
         {
-            if(!_session.IsConnected || _session.DbClient is null)
+            if (!_session.IsConnected || _session.GetDbClient() is null)
             {
                 UpdateOutput("⚠️ Будь ласка, спочатку підключіться до бази даних!");
                 return;
@@ -254,7 +259,6 @@ namespace KnifeSQLExtension.UI.Views
                 await InitSchemas();
                 await RefreshTables(true);
             });
-
         }
 
         /// <summary>
@@ -266,16 +270,17 @@ namespace KnifeSQLExtension.UI.Views
         /// <returns>A task that represents the asynchronous operation.</returns>
         private async Task InitSchemas()
         {
-            if(!_session.IsConnected || _session.DbClient is null)
+            if (!_session.IsConnected || _session.GetDbClient() is null)
             {
                 UpdateOutput("⚠️ Будь ласка, спочатку підключіться до бази даних!");
                 return;
             }
-            var dbSchemas = await _session.DbClient.GetDatabaseSchemasAsync();
+
+            var dbSchemas = await _session.GetDbClient().GetDatabaseSchemasAsync();
 
             _schemaSelect.WithItems([.. dbSchemas.Select(t => Item(t))]);
         }
-        
+
         /// <summary>
         /// Asynchronously refreshes the list of database tables displayed in the user interface based on the currently
         /// selected schema.
@@ -283,29 +288,34 @@ namespace KnifeSQLExtension.UI.Views
         /// <remarks>If there is no active database connection, the method does not perform the refresh
         /// and instead prompts the user to connect to the database first.</remarks>
         /// <returns>A task that represents the asynchronous refresh operation.</returns>
-        private async Task RefreshTables(bool forceRefresh=false)
+        private async Task RefreshTables(bool forceRefresh = false)
         {
-            if(!_session.IsConnected || _session.DbClient is null)
+            if (!_session.IsConnected || _session.GetDbClient() is null)
             {
                 UpdateOutput("⚠️ Будь ласка, спочатку підключіться до бази даних!");
                 return;
             }
 
             var tables = await _tableService.GetTablesAsync(_schemaSelect.SelectedItem.Text, forceRefresh);
-            _allTableWrap.WithChildren([.. tables.Select((s) => {
-                var button = Button(s.FullName + "-btn", s.FullName);
+            _allTableWrap.WithChildren([
+                .. tables.Select((s) =>
+                {
+                    var button = Button(s.FullName + "-btn", s.FullName);
 
-                button.OnClick(() => {
-                    button.AccentAppearance();
-                });
+                    button.OnClick(() => { button.AccentAppearance(); });
 
-                return button;
-            })]);
+                    return button;
+                })
+            ]);
         }
 
         private List<string> GetSelectedTables()
         {
-            return [.. _allTableWrap.Children.Where(item => ((IUIButton)item).IsAccent).Select(item => ((IUIButton)item).Text)];
+            return
+            [
+                .. _allTableWrap.Children.Where(item => ((IUIButton)item).IsAccent)
+                    .Select(item => ((IUIButton)item).Text)
+            ];
         }
 
 

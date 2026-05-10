@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
 {
@@ -14,10 +15,12 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
     {
         private readonly IDatabaseClient _client;
         private List<TableSchema> _cachedTables = null!;
+        private readonly ILogger<TableService> _logger;
 
-        public TableService(IDatabaseClient client)
+        public TableService(IDatabaseClient client, ILogger<TableService> logger)
         {
             _client = client;
+            _logger = logger;
         }
 
         /// <summary>
@@ -34,6 +37,7 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
             if(_cachedTables is not null && !forceRefresh)
                 return _cachedTables;
 
+            _logger.LogInformation("Retrieving table schemas from database");
             List<TableSchema> tableSchemas = [];
             var tableFullNames = await _client.GetTablesAsync();
 
@@ -46,6 +50,7 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
 
             // Save tables to cache
             _cachedTables = tableSchemas;
+            _logger.LogInformation("Retrieved {Count} table schemas", tableSchemas.Count);
 
             return tableSchemas;
         }
@@ -80,8 +85,10 @@ namespace KnifeSQLExtension.Features.RandomDataGeneration.Services
 
         public async Task SeedTable(string table, List<Dictionary<string, object>> rows)
         {
+            _logger.LogInformation("Seeding table {Table} with {Count} rows", table, rows.Count);
             foreach(var row in rows)
                 await _client.InsertDataAsync(table, row);
+            _logger.LogInformation("Successfully seeded table {Table}", table);
         }
 
         public async Task<TableSchema> GetTableAsync(string table)

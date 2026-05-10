@@ -1,9 +1,4 @@
 ﻿using KnifeSQLExtension.Core.Models.Constraints;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace KnifeSQLExtension.Core.Models
 {
@@ -15,10 +10,7 @@ namespace KnifeSQLExtension.Core.Models
 
         public string FullName
         {
-            get
-            {
-                return $"{SchemaName}.{TableName}";
-            }
+            get { return $"{SchemaName}.{TableName}"; }
         }
 
         public ICollection<ColumnSchema> Columns { get; set; } = [];
