@@ -82,11 +82,6 @@ namespace KnifeSQLExtension.Core.Services
 
                 if (_apiRoutes.TryGetValue(path, out Func<string>? handler))
                 {
-                    //if (path.Contains("events"))
-                    //{
-                    //    StartEvent(context);
-                    //}
-
                     SendResponse(context, handler(), "application/json");
                 }
                 else
@@ -103,7 +98,10 @@ namespace KnifeSQLExtension.Core.Services
                     context.Response.StatusCode = 500;
                     context.Response.Close();
                 }
-                catch { /* response may already be closed */ }
+                catch
+                {
+                    _logger.LogInformation("Server has been already closed");
+                }
             }
 
         }
@@ -140,15 +138,6 @@ namespace KnifeSQLExtension.Core.Services
             context.Response.OutputStream.Write(buffer, 0, buffer.Length);
             context.Response.OutputStream.Close();
         }
-
-        //private static void StartEvent(HttpListenerContext context)
-        //{
-        //    byte[] buffer = Encoding.UTF8.GetBytes(content);
-        //    context.Response.ContentType = "text/event-stream";
-        //    context.Response.OutputStream.Write(buffer, 0, buffer.Length);
-        //    context.Response.OutputStream.Close();
-        //}
-
         private static string GetMimeType(string path)
         {
             return Path.GetExtension(path) switch
