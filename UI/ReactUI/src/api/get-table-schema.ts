@@ -1,13 +1,12 @@
 import z from 'zod';
 import { TableSchemaMapper } from '../domain/mappers/table-schema-mapper';
-import { BASE_URL, appFetch } from './fetch';
 
 export async function getTableSchema() {
-  const response = await appFetch('/api/schema');
+  const response = await fetch('/api/schema');
 
   if (!response.ok) {
     throw new Error(
-      `Server returned ${response.status}: ${response.statusText} at ${BASE_URL}/api/schema`,
+      `Server returned ${response.status}: ${response.statusText} at /api/schema`,
     );
   }
 

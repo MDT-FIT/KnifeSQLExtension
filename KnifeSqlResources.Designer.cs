@@ -61,7 +61,7 @@ namespace KnifeSQLExtension {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to test.
+        ///   Looks up a localized string similar to knife_sql.
         /// </summary>
         internal static string AccessibleName {
             get {
@@ -70,7 +70,7 @@ namespace KnifeSQLExtension {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to test.
+        ///   Looks up a localized string similar to Multitool for SQL like databases. Supported: MSSQL and Postgres.
         /// </summary>
         internal static string Description {
             get {
@@ -79,7 +79,7 @@ namespace KnifeSQLExtension {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to test.
+        ///   Looks up a localized string similar to Knife SQL.
         /// </summary>
         internal static string HelloWorldLabel {
             get {
@@ -88,7 +88,7 @@ namespace KnifeSQLExtension {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Test.
+        ///   Looks up a localized string similar to Knife SQL.
         /// </summary>
         internal static string LongDisplayTitle {
             get {
@@ -97,7 +97,7 @@ namespace KnifeSQLExtension {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to test.
+        ///   Looks up a localized string similar to Knife SQL.
         /// </summary>
         internal static string ShortDisplayTitle {
             get {
