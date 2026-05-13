@@ -1,6 +1,7 @@
 ﻿using DevToys.Api;
 using KnifeSQLExtension.Core.Services;
 using KnifeSQLExtension.Features.RandomDataGeneration.Services;
+using KnifeSQLExtension.Features.SqlVisualizer.Models;
 using KnifeSQLExtension.Features.SqlVisualizer.Services;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
@@ -17,10 +18,10 @@ namespace KnifeSQLExtension.UI.Views
         private VisualizerService _service;
         private TableService _tableService;
 
-        private readonly IUIWebView _webView = WebView();
+        private IUIWebView _webView = WebView(Guid.NewGuid().ToString());
         private LocalServer _server;
-        // For simplicity, we're hardcoding the server URL and port. In a production scenario, consider making this configurable or using dynamic port assignment.
-        private string _serverUrl = "http://127.0.0.1:8080/";
+        private string _serverUrl = "";
+        private Dictionary<string, TableNode> _currentNodes = [];
 
         public VisualizerView(SqlSession session, ILogger<VisualizerView> logger, ILoggerFactory loggerFactory)
         {
@@ -32,6 +33,8 @@ namespace KnifeSQLExtension.UI.Views
             _logger = logger;
             _loggerFactory = loggerFactory;
             _server = new LocalServer(distPath, logger);
+            _serverUrl = $"http://localhost:{_server.GetCurrentPort()}/";
+            _webView.SourceChanged += (s, e) => _logger.LogInformation($"WebView navigated to: {_webView.Source}");
         }
 
         public IUIElement View => BuildUI();
@@ -43,13 +46,16 @@ namespace KnifeSQLExtension.UI.Views
             _tableService = new TableService(_session.GetDbClient(), _loggerFactory.CreateLogger<TableService>());
             _service = new VisualizerService(_tableService);
 
-            Dictionary<string, Features.SqlVisualizer.Models.TableNode> nodes = await _service.CreateNodes();
+            _currentNodes = await _service.CreateNodes();
 
-            _server.RegisterEndpoint("/api/schema", () => _service.GetSerializedSchema(nodes));
+            _server.RegisterEndpoint("/api/schema", () => _service.GetSerializedSchema(_currentNodes));
 
-            _server.Start();
+            if (!_server.isActive())
+            {
+                _server.Start();
+            }
 
-            _webView.NavigateToUri(new Uri(_serverUrl));
+            _webView.NavigateToUri(new Uri($"{_serverUrl}?update={Guid.NewGuid()}"));
 
             _logger.LogInformation("Schema Visualizer initialized successfully");
         }

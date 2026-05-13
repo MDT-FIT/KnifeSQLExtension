@@ -1,9 +1,9 @@
 ﻿using DevToys.Api;
 using KnifeSQLExtension.Core;
-using System.Text;
 using KnifeSQLExtension.Core.Services;
 using KnifeSQLExtension.Core.Services.Database;
 using Microsoft.Extensions.Logging;
+using System.Text;
 using static DevToys.Api.GUI;
 
 namespace KnifeSQLExtension.UI.Views
@@ -30,7 +30,6 @@ namespace KnifeSQLExtension.UI.Views
 
         private readonly IUIMultiLineTextInput _outputBox = MultiLineTextInput("sql-output");
 
-        // --- State variables for Confirmation Logic ---
         private bool _isAwaitingConfirmation = false;
         private string _pendingDangerousQuery = string.Empty;
 
@@ -45,7 +44,7 @@ namespace KnifeSQLExtension.UI.Views
                         .WithChildren(
                             Label("Database Connection").Style(UILabelStyle.Subtitle),
                             Stack()
-                                .Horizontal() ,
+                                .Horizontal(),
                             _connectionStringInput
                                 .Title("Connection String")
                                 .Text("Server=DESKTOP-J1QI1UR;Database=test;Integrated Security=True;Encrypt=False;"),
@@ -66,17 +65,22 @@ namespace KnifeSQLExtension.UI.Views
             {
                 try
                 {
+                    if (_session.IsConnected)
+                    {
+                        _session.DisconnectDbClient();
+                    }
+
                     UpdateOutput("Підключення...");
 
-                    var type = ConnectionStringParser.ParseConnectionString(_connectionStringInput.Text);
+                    DatabaseType type = ConnectionStringParser.ParseConnectionString(_connectionStringInput.Text);
 
-                    var client = DatabaseFactory.CreateDatabaseClient(type, _loggerFactory);
-                    var isConnected = await client.ConnectAsync(_connectionStringInput.Text);
+                    Core.Services.Database.Interfaces.IDatabaseClient client = DatabaseFactory.CreateDatabaseClient(type, _loggerFactory);
+                    bool isConnected = await client.ConnectAsync(_connectionStringInput.Text);
                     _session.ConnectDbClient(client, isConnected);
 
                     if (_session.IsConnected)
                     {
-                        UpdateOutput($"✅ Підключено до MS SQL успішно!");
+                        UpdateOutput($"✅ Підключено до {client.DatabaseType} успішно!");
                     }
                     else
                         UpdateOutput("❌ Підключитися не вдалося.");
@@ -88,7 +92,7 @@ namespace KnifeSQLExtension.UI.Views
                 }
             });
         }
-        
+
         private void OnExecuteClicked()
         {
             if (!_session.IsConnected || _session.GetDbClient() == null)
@@ -140,16 +144,16 @@ namespace KnifeSQLExtension.UI.Views
                 try
                 {
                     UpdateOutput("Виконання запиту...");
-                    var results = await _session.GetDbClient().ExecuteQueryAsync(query);
+                    List<Dictionary<string, object>> results = await _session.GetDbClient().ExecuteQueryAsync(query);
 
-                    var sb = new StringBuilder();
+                    StringBuilder sb = new StringBuilder();
                     sb.AppendLine($"✅ Запит успішно виконано. (Повернуто результатів: {results.Count})\n");
 
                     int rowIndex = 1;
-                    foreach (var row in results)
+                    foreach (Dictionary<string, object> row in results)
                     {
                         sb.AppendLine($"--- Результат {rowIndex} ---");
-                        foreach (var column in row)
+                        foreach (KeyValuePair<string, object> column in row)
                         {
                             string value = column.Value == System.DBNull.Value
                                 ? "NULL"
@@ -170,6 +174,9 @@ namespace KnifeSQLExtension.UI.Views
             });
         }
 
-        private void UpdateOutput(string message) => _outputBox.Text(message);
+        private void UpdateOutput(string message)
+        {
+            _outputBox.Text(message);
+        }
     }
 }
