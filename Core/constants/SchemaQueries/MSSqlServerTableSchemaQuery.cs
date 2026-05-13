@@ -1,8 +1,10 @@
-﻿internal static class MSSqlServerTableSchemaQuery
+﻿namespace KnifeSQLExtension.Core.Constants.SchemaQueries
 {
-    public static string Query(string table, string schema = "dbo")
+    internal static class MSSqlServerTableSchemaQuery
     {
-        return $@"
+        public static string Query(string table, string schema = "dbo")
+        {
+            return $@"
             SELECT
                 c.COLUMN_NAME AS Name,
                 c.DATA_TYPE AS SqlType,
@@ -85,5 +87,6 @@
               AND c.TABLE_SCHEMA = '{schema}'
 
             ORDER BY c.ORDINAL_POSITION;";
+        }
     }
 }

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KnifeSQLExtension.Core.Constants.ForeignKeyQueries
+﻿namespace KnifeSQLExtension.Core.Constants.ForeignKeyQueries
 {
     public static class MSSqlServerForeignKeysQuery
     {

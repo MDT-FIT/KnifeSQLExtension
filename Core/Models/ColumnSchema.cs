@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KnifeSQLExtension.Core.Models
+﻿namespace KnifeSQLExtension.Core.Models
 {
     public sealed class ColumnSchema
     {
@@ -17,10 +11,12 @@ namespace KnifeSQLExtension.Core.Models
         public bool IsComputed { get; set; }
         public bool IsUnique { get; set; }
         public bool HasDefault { get; set; }
-        public bool IsPlain 
-        { 
-            get => !(IsPrimaryKey && IsUnique && FkObject is not null); 
+
+        public bool IsPlain
+        {
+            get => !(IsPrimaryKey && IsUnique && FkObject is not null);
         }
+
         public FkObject? FkObject { get; set; } = null;
     }
 }

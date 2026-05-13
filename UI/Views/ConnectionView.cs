@@ -1,6 +1,8 @@
 ﻿using DevToys.Api;
 using KnifeSQLExtension.Core;
-using KnifeSQLExtension.Core.Services.Database.Implementations;
+using KnifeSQLExtension.Core.Services;
+using KnifeSQLExtension.Core.Services.Database;
+using Microsoft.Extensions.Logging;
 using System.Text;
 using static DevToys.Api.GUI;
 
@@ -9,14 +11,15 @@ namespace KnifeSQLExtension.UI.Views
     public sealed class ConnectionView : IView
     {
         private readonly SqlSession _session;
-        private readonly IUIButton _generationButton;
-        private readonly GenerationView _generationView;
+        private readonly ILogger<ConnectionView> _logger;
+        private readonly ILoggerFactory _loggerFactory;
 
-        public ConnectionView(SqlSession session, IUIButton generationButton, GenerationView generationView)
+        public ConnectionView(SqlSession session, ILogger<ConnectionView> logger,
+            ILoggerFactory loggerFactory)
         {
             _session = session;
-            _generationButton = generationButton;
-            _generationView = generationView;
+            _logger = logger;
+            _loggerFactory = loggerFactory;
         }
 
         private readonly IUIMultiLineTextInput _connectionStringInput = MultiLineTextInput("sql-connection-string");
@@ -27,7 +30,6 @@ namespace KnifeSQLExtension.UI.Views
 
         private readonly IUIMultiLineTextInput _outputBox = MultiLineTextInput("sql-output");
 
-        // --- State variables for Confirmation Logic ---
         private bool _isAwaitingConfirmation = false;
         private string _pendingDangerousQuery = string.Empty;
 
@@ -41,49 +43,59 @@ namespace KnifeSQLExtension.UI.Views
                         .Vertical()
                         .WithChildren(
                             Label("Database Connection").Style(UILabelStyle.Subtitle),
+                            Stack()
+                                .Horizontal(),
                             _connectionStringInput
                                 .Title("Connection String")
                                 .Text("Server=DESKTOP-J1QI1UR;Database=test;Integrated Security=True;Encrypt=False;"),
                             _connectButton.Text("Connect").OnClick(OnConnectClicked),
-
                             Label("Query Editor").Style(UILabelStyle.Subtitle),
-                            _queryInput.Title("SQL Query").Language("sql").Text("SELECT * FROM INFORMATION_SCHEMA.TABLES;"),
+                            _queryInput.Title("SQL Query").Language("sql")
+                                .Text("SELECT * FROM INFORMATION_SCHEMA.TABLES;"),
                             _executeButton.Text("Execute Query").AccentAppearance().OnClick(OnExecuteClicked)
                         )
                 )
                 .WithBottomPaneChild(
-                    // OutputBox розтягнеться на всю нижню панель!
                     _outputBox.Title("Results & Logs").ReadOnly()
-        );
+                );
 
-        // --- Logics ---
         private void OnConnectClicked()
         {
             Task.Run(async () =>
             {
                 try
                 {
+                    if (_session.IsConnected)
+                    {
+                        _session.DisconnectDbClient();
+                    }
+
                     UpdateOutput("Підключення...");
 
-                    _session.DbClient = new MsSqlDatabaseService();
-                    _session.IsConnected = await _session.DbClient.ConnectAsync(_connectionStringInput.Text);
+                    DatabaseType type = ConnectionStringParser.ParseConnectionString(_connectionStringInput.Text);
+
+                    Core.Services.Database.Interfaces.IDatabaseClient client = DatabaseFactory.CreateDatabaseClient(type, _loggerFactory);
+                    bool isConnected = await client.ConnectAsync(_connectionStringInput.Text);
+                    _session.ConnectDbClient(client, isConnected);
 
                     if (_session.IsConnected)
                     {
-                        UpdateOutput($"✅ Підключено до MS SQL успішно!");
-                        await _generationView.Init();
-                        _generationButton.Show();
+                        UpdateOutput($"✅ Підключено до {client.DatabaseType} успішно!");
                     }
                     else
                         UpdateOutput("❌ Підключитися не вдалося.");
                 }
-                catch (System.Exception ex) { UpdateOutput($"❌ Помилка: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to connect to database");
+                    UpdateOutput($"❌ Помилка: {ex.Message}");
+                }
             });
         }
 
         private void OnExecuteClicked()
         {
-            if (!_session.IsConnected || _session.DbClient == null)
+            if (!_session.IsConnected || _session.GetDbClient() == null)
             {
                 UpdateOutput("⚠️ Будь ласка, спочатку підключіться до бази даних!");
                 return;
@@ -91,8 +103,6 @@ namespace KnifeSQLExtension.UI.Views
 
             string query = _queryInput.Text;
             if (string.IsNullOrWhiteSpace(query)) return;
-
-            // Parser with confirmation
 
             // 1. Check if we wait this one query 
             if (_isAwaitingConfirmation && query == _pendingDangerousQuery)
@@ -117,7 +127,8 @@ namespace KnifeSQLExtension.UI.Views
 
                     // Change button text with warning
                     _executeButton.Text("⚠️ ПІДТВЕРДИТИ ЗАПИТ ⚠️");
-                    UpdateOutput($"{parserWarning}\n\n🛑 Запит призупинено для вашої безпеки.\nЯкщо ви ДІЙСНО хочете його виконати, натисніть кнопку '⚠️ ПІДТВЕРДИТИ ЗАПИТ ⚠️' ще раз.");
+                    UpdateOutput(
+                        $"{parserWarning}\n\n🛑 Запит призупинено для вашої безпеки.\nЯкщо ви ДІЙСНО хочете його виконати, натисніть кнопку '⚠️ ПІДТВЕРДИТИ ЗАПИТ ⚠️' ще раз.");
                     return;
                 }
 
@@ -127,36 +138,45 @@ namespace KnifeSQLExtension.UI.Views
                 _executeButton.Text("Виконати запит");
             }
 
-            // Querry execution
+            // Query execution
             Task.Run(async () =>
             {
                 try
                 {
                     UpdateOutput("Виконання запиту...");
-                    var results = await _session.DbClient.ExecuteQueryAsync(query);
+                    List<Dictionary<string, object>> results = await _session.GetDbClient().ExecuteQueryAsync(query);
 
-                    var sb = new StringBuilder();
+                    StringBuilder sb = new StringBuilder();
                     sb.AppendLine($"✅ Запит успішно виконано. (Повернуто результатів: {results.Count})\n");
 
                     int rowIndex = 1;
-                    foreach (var row in results)
+                    foreach (Dictionary<string, object> row in results)
                     {
                         sb.AppendLine($"--- Результат {rowIndex} ---");
-                        foreach (var column in row)
+                        foreach (KeyValuePair<string, object> column in row)
                         {
-                            string value = column.Value == System.DBNull.Value ? "NULL" : column.Value?.ToString() ?? "NULL";
+                            string value = column.Value == System.DBNull.Value
+                                ? "NULL"
+                                : column.Value?.ToString() ?? "NULL";
                             sb.AppendLine($"{column.Key}: {value}");
                         }
+
                         sb.AppendLine();
                         rowIndex++;
                     }
 
                     UpdateOutput(sb.ToString());
                 }
-                catch (System.Exception ex) { UpdateOutput($"❌ Помилка SQL: {ex.Message}"); }
+                catch (System.Exception ex)
+                {
+                    UpdateOutput($"❌ Помилка SQL: {ex.Message}");
+                }
             });
         }
 
-        private void UpdateOutput(string message) => _outputBox.Text(message);
+        private void UpdateOutput(string message)
+        {
+            _outputBox.Text(message);
+        }
     }
 }

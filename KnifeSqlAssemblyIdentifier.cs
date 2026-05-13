@@ -3,7 +3,6 @@ using System.ComponentModel.Composition;
 
 namespace KnifeSQLExtension
 {
-  
     [Export(typeof(IResourceAssemblyIdentifier))]
     [Name(nameof(KnifeSqlAssemblyIdentifier))]
     internal sealed class KnifeSqlAssemblyIdentifier : IResourceAssemblyIdentifier

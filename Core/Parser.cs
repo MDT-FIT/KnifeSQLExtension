@@ -7,7 +7,7 @@ public static class Parser
     public static string CheckForWarnings(string sqlQuery)
     {
         // if query is empty return it
-        if (string.IsNullOrWhiteSpace(sqlQuery)) 
+        if (string.IsNullOrWhiteSpace(sqlQuery))
             return string.Empty;
 
         // convert to uppercase for easier keyword mathcing

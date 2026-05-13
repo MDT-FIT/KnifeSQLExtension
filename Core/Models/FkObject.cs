@@ -1,6 +1,4 @@
-﻿
-
-namespace KnifeSQLExtension.Core.Models
+﻿namespace KnifeSQLExtension.Core.Models
 {
     public class FkObject
     {
