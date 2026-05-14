@@ -1,9 +1,8 @@
 {
-  "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
     "DevToys GUI": {
       "commandName": "Executable",
-      "executablePath": "%DevToysGuiDebugEntryPoint%",
+      "executablePath": "C:\\Users\\Acer\\AppData\\Local\\Programs\\DevToys Preview\\DevToys.exe",
       "environmentVariables": {
         "EXTRAPLUGIN": "$(TargetDir)"
       }
@@ -11,10 +10,10 @@
     "DevToys CLI": {
       "commandName": "Executable",
       "executablePath": "%DevToysCliDebugEntryPoint%",
-      "commandLineArgs": "",
       "environmentVariables": {
         "EXTRAPLUGIN": "$(TargetDir)"
       }
     }
-  }
+  },
+  "$schema": "https://json.schemastore.org/launchsettings.json"
 }

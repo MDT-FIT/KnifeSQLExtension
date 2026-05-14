@@ -1,4 +1,5 @@
 using DevToys.Api;
+using KnifeSQLExtension.Core.Services;
 using KnifeSQLExtension.UI.Views;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.Composition;
@@ -31,13 +32,15 @@ internal sealed class KnifeSqlGui : IGuiTool
 
     private readonly List<IUIElement> _allPanels;
 
-
     public KnifeSqlGui()
     {
         ILoggerFactory loggerFactory = LoggerFactory.Create(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Information));
         SqlSession session = new SqlSession();
 
-        ConnectionView connectionView = new ConnectionView(session, loggerFactory.CreateLogger<ConnectionView>(), loggerFactory);
+        // --- Create SnapshotService and pass it to ConnectionView ---
+        SnapshotService snapshotService = new SnapshotService(loggerFactory.CreateLogger<SnapshotService>());
+
+        ConnectionView connectionView = new ConnectionView(session, loggerFactory.CreateLogger<ConnectionView>(), loggerFactory, snapshotService);
         GenerationView generationView = new GenerationView(session, loggerFactory.CreateLogger<GenerationView>(), loggerFactory);
         VisualizerView visualizerView = new VisualizerView(session, loggerFactory.CreateLogger<VisualizerView>(), loggerFactory);
 
@@ -72,7 +75,7 @@ internal sealed class KnifeSqlGui : IGuiTool
     private enum GridColumns { Main }
 
     public UIToolView View => new UIToolView(
-        isScrollable: false,
+        isScrollable: true,
         Grid()
         .Rows(
             (GridRows.TopButtons, Auto),

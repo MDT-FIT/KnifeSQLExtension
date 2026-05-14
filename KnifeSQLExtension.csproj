@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +24,7 @@
   <ItemGroup>
     <PackageReference Include="Bogus" Version="35.6.5" />
     <PackageReference Include="DevToys.Api" Version="2.0.9-preview" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
     <PackageReference Include="Npgsql" Version="7.0.10" />
     <PackageReference Include="SqlParserCS" Version="0.6.5" />
@@ -72,6 +74,11 @@
     <Folder Include="Features\SqlDiffView\Models\" />
     <Folder Include="Features\SqlDiffView\Services\" />
     <Folder Include="UI\ReactUI\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="UI\DiffViews\Snapshot.html" />
+    <EmbeddedResource Include="UI\DiffViews\Current.html" />
   </ItemGroup>
 
 </Project>

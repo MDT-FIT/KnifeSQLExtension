@@ -28,7 +28,15 @@ namespace KnifeSQLExtension.Core.Services
         {
             _listener = new HttpListener();
             _listener.Prefixes.Add($"http://127.0.0.1:{_port}/");
-            _listener.Start();
+            try
+            {
+                _listener.Start();
+            }
+            catch (HttpListenerException ex)
+            {
+                // Port already in use, ignore
+                return;
+            }
 
             Task.Run(async () =>
             {
@@ -43,10 +51,12 @@ namespace KnifeSQLExtension.Core.Services
         private void ProcessRequest(HttpListenerContext context)
         {
             string path = context.Request.Url.AbsolutePath.ToLower();
-
             if (_apiRoutes.TryGetValue(path, out Func<string>? handler))
             {
-                SendResponse(context, handler(), "application/json");
+                string contentType = (path == "/" || path == "/snapshot" || path == "/current" || path.EndsWith(".html"))
+                ? "text/html; charset=utf-8"
+    :           "application/json";
+                SendResponse(context, handler(), contentType);
             }
             else
             {
